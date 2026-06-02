@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Stage,
   Layer,
@@ -18,102 +18,87 @@ export default function TestKonva() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentLabel, setCurrentLabel] = useState("title");
 
-  const [recipeScanId, setRecipeScanId] = useState("RSCN_DEMO_001");
+  const [recipeScanId] = useState("RSCN_DEMO_001");
 
-  // ------------------------------------------------------------
-  // Load saved regions from DB
-  // ------------------------------------------------------------
-    // ------------------------------------------------------------
-    // Manual region loading only
-    // ------------------------------------------------------------
-    const loadRegions = async () => {
-      try {
-        const token = localStorage.getItem("access_token_admin");
-        const actorId = localStorage.getItem("admin_user_id");
+  const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
 
-        if (!token) {
-          console.log("No token yet, skipping region load");
-          return;
-        }
+  const scale = image ? Math.min(1, maxViewportWidth / image.width) : 1;
 
-        const response = await fetch(
-          `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions?limit=100`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "X-Actor-Id": actorId,
-            },
-          }
-        );
+  const stageWidth = image ? image.width * scale : 1200;
+  const stageHeight = image ? image.height * scale : 1800;
 
-        const result = await response.json();
-
-        console.log("Loaded regions:", result);
-
-        if (!response.ok) {
-          console.log("Load regions failed:", result);
-          return;
-        }
-
-        const items = result.items || [];
-
-        const loadedRects = items
-          .map((r) => {
-            const frontendType =
-              r.label === "serves" && r.region_type === "notes"
-                ? "serves"
-                : r.region_type || "unknown";
-
-            const x = Number(r.x);
-            const y = Number(r.y);
-            const width = Number(r.width);
-            const height = Number(r.height);
-
-            if (
-              Number.isNaN(x) ||
-              Number.isNaN(y) ||
-              Number.isNaN(width) ||
-              Number.isNaN(height)
-            ) {
-              return null;
-            }
-
-            return {
-              id: r.id,
-              x: width < 0 ? x + width : x,
-              y: height < 0 ? y + height : y,
-              width: Math.abs(width),
-              height: Math.abs(height),
-              split_x: r.split_x == null ? null : Number(r.split_x),
-              region_type: frontendType,
-              label: r.label || frontendType,
-              ocr_text: r.ocr_text || "",
-              parsed_json: r.parsed_json || null,
-              confidence: r.confidence || null,
-            };
-          })
-          .filter(Boolean);
-
-        setRectangles(loadedRects);
-      } catch (err) {
-        console.error("Load regions error:", err);
-      }
+  const toImagePos = (stage) => {
+    const p = stage.getPointerPosition();
+    return {
+      x: p.x / scale,
+      y: p.y / scale,
     };
+  };
+
+  const loadRegions = async () => {
+    try {
+      const token = localStorage.getItem("access_token_admin");
+      const actorId = localStorage.getItem("admin_user_id");
+
+      const response = await fetch(
+        `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions?limit=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Actor-Id": actorId,
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.log("Load failed:", result);
+        return;
+      }
+
+      const loadedRects = (result.items || [])
+        .map((r) => {
+          const regionType =
+            r.label === "serves" && r.region_type === "notes"
+              ? "serves"
+              : r.region_type || "unknown";
+
+          const x = Number(r.x);
+          const y = Number(r.y);
+          const width = Number(r.width);
+          const height = Number(r.height);
+
+          if ([x, y, width, height].some(Number.isNaN)) return null;
+
+          return {
+            id: r.id,
+            x: width < 0 ? x + width : x,
+            y: height < 0 ? y + height : y,
+            width: Math.abs(width),
+            height: Math.abs(height),
+            split_x: r.split_x == null ? null : Number(r.split_x),
+            region_type: regionType,
+            label: r.label || regionType,
+            ocr_text: r.ocr_text || "",
+            parsed_json: r.parsed_json || null,
+            confidence: r.confidence || null,
+          };
+        })
+        .filter(Boolean);
+
+      setRectangles(loadedRects);
+    } catch (err) {
+      console.error("Load regions error:", err);
+    }
+  };
 
   const handleMouseDown = (e) => {
     if (!image) return;
 
-    const stage = e.target.getStage();
-    const rawPos = stage.getPointerPosition();
-
-    const pos = {
-      x: rawPos.x / scale,
-      y: rawPos.y / scale,
-    };
+    const pos = toImagePos(e.target.getStage());
 
     setIsDrawing(true);
-
     setNewRect({
       x: pos.x,
       y: pos.y,
@@ -128,8 +113,7 @@ export default function TestKonva() {
   const handleMouseMove = (e) => {
     if (!isDrawing || !newRect) return;
 
-    const stage = e.target.getStage();
-    const pos = stage.getPointerPosition();
+    const pos = toImagePos(e.target.getStage());
 
     setNewRect({
       ...newRect,
@@ -143,10 +127,10 @@ export default function TestKonva() {
 
     const fixedRect = {
       ...newRect,
-      width: Math.abs(newRect.width),
-      height: Math.abs(newRect.height),
       x: newRect.width < 0 ? newRect.x + newRect.width : newRect.x,
       y: newRect.height < 0 ? newRect.y + newRect.height : newRect.y,
+      width: Math.abs(newRect.width),
+      height: Math.abs(newRect.height),
     };
 
     if (fixedRect.width < 5 || fixedRect.height < 5) {
@@ -167,11 +151,7 @@ export default function TestKonva() {
   const updateRectanglePosition = (index, x, y) => {
     setRectangles((prev) => {
       const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        x,
-        y,
-      };
+      updated[index] = { ...updated[index], x, y };
       return updated;
     });
   };
@@ -181,14 +161,12 @@ export default function TestKonva() {
       const updated = [...prev];
       const rect = updated[index];
 
-      let newSplitX = absoluteX - rect.x;
-
-      if (newSplitX < 10) newSplitX = 10;
-      if (newSplitX > rect.width - 10) newSplitX = rect.width - 10;
+      let splitX = absoluteX - rect.x;
+      splitX = Math.max(10, Math.min(splitX, rect.width - 10));
 
       updated[index] = {
         ...rect,
-        split_x: newSplitX,
+        split_x: splitX,
       };
 
       return updated;
@@ -198,66 +176,34 @@ export default function TestKonva() {
   const handleSave = async () => {
     try {
       const payload = {
-        regions: rectangles.map((r, index) => {
-          const safeWidth = Math.max(10, Math.min(r.width, 1100));
-          const safeHeight = Math.max(10, Math.min(r.height, 1600));
+        regions: rectangles.map((r, index) => ({
+          region_type:
+            r.region_type === "serves"
+              ? "notes"
+              : r.region_type || r.label || "unknown",
 
-          const safeX = Math.max(0, r.x);
-          const safeY = Math.max(0, r.y);
+          label:
+            r.region_type === "serves"
+              ? "serves"
+              : r.label || r.region_type || `Region ${index + 1}`,
 
-          return {
-            region_type:
-              r.region_type === "serves"
-                ? "notes"
-                : r.region_type || r.label || "unknown",
+          sort_order: index + 1,
 
-            label:
-              r.region_type === "serves"
-                ? "serves"
-                : r.label || r.region_type || `Region ${index + 1}`,
+          x: Math.round(Math.max(0, r.x)),
+          y: Math.round(Math.max(0, r.y)),
+          width: Math.round(Math.max(10, r.width)),
+          height: Math.round(Math.max(10, r.height)),
 
-            sort_order: index + 1,
+          split_x:
+            r.region_type === "ingredient_row"
+              ? Math.round(r.split_x ?? 180)
+              : null,
 
-            x: Math.round(safeX),
-            y: Math.round(safeY),
-
-            width: Math.round(safeWidth),
-            height: Math.round(safeHeight),
-
-            split_x:
-              r.region_type === "ingredient_row"
-                ? Math.round(r.split_x ?? 180)
-                : null,
-
-            ocr_text: r.ocr_text || "",
-            parsed_json: r.parsed_json || null,
-            confidence: r.confidence || null,
-          };
-        }),
+          ocr_text: r.ocr_text || "",
+          parsed_json: r.parsed_json || null,
+          confidence: r.confidence || null,
+        })),
       };
-
-      const validTypes = [
-        "title",
-        "ingredients",
-        "ingredient_row",
-        "instruction",
-        "instructions",
-        "notes",
-        "image",
-        "unknown",
-      ];
-
-      const bad = payload.regions.find(
-        (r) => !validTypes.includes(r.region_type)
-      );
-
-      if (bad) {
-        alert(`Invalid frontend region_type: ${bad.region_type}`);
-        console.log("Bad region:", bad);
-        return;
-      }
-
-      console.log("Saving payload:", payload);
 
       const token = localStorage.getItem("access_token_admin");
       const actorId = localStorage.getItem("admin_user_id");
@@ -275,69 +221,36 @@ export default function TestKonva() {
         }
       );
 
-      const text = await response.text();
-
-      let result;
-      try {
-        result = JSON.parse(text);
-      } catch {
-        result = { raw: text };
-      }
-
-      console.log("Save status:", response.status);
-      console.log("Save result:", result);
+      const result = await response.json();
 
       if (!response.ok) {
-        alert(`Save failed: ${result.message || result.error || response.status}`);
+        alert(`Save failed: ${result.message || result.error}`);
         return;
       }
 
       alert("Save successful!");
     } catch (err) {
       console.error("Save error:", err);
-      alert("Save failed. Check Flask server.");
+      alert("Save failed.");
     }
   };
 
-    const MAX_VIEWPORT_WIDTH = Math.min(window.innerWidth - 40, 900);
-
-    const scale = image
-      ? Math.min(1, MAX_VIEWPORT_WIDTH / image.width)
-      : 1;
-
-    const stageWidth = image
-      ? image.width * scale
-      : 1200;
-
-    const stageHeight = image
-      ? image.height * scale
-      : 1800;
-
-   return (
-
+  return (
     <div style={{ padding: 20 }}>
       <h2>Recipe Scan Region Editor</h2>
 
-      <div style={{ marginBottom: 10 }}>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            setImageUrl(URL.createObjectURL(file));
-          }}
-        />
-      </div>
-
-      <div
-        style={{
-          marginBottom: 10,
-          display: "flex",
-          gap: 8,
-          flexWrap: "wrap",
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          setImageUrl(URL.createObjectURL(file));
+          setRectangles([]);
         }}
-      >
+      />
+
+      <div style={{ marginTop: 10, marginBottom: 10, display: "flex", gap: 8 }}>
         <button onClick={loadRegions}>Load</button>
         <button onClick={() => setCurrentLabel("title")}>Title</button>
         <button onClick={() => setCurrentLabel("notes")}>Notes</button>
@@ -362,10 +275,7 @@ export default function TestKonva() {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        style={{
-          border: "1px solid #999",
-          background: "#eee",
-        }}
+        style={{ border: "1px solid #999", background: "#eee" }}
       >
         <Layer>
           {image && (
@@ -385,10 +295,10 @@ export default function TestKonva() {
             return (
               <React.Fragment key={index}>
                 <Rect
-                 x={rect.x * scale}
-                 y={rect.y * scale}
-                 width={rect.width * scale}
-                 height={rect.height * scale}
+                  x={rect.x * scale}
+                  y={rect.y * scale}
+                  width={rect.width * scale}
+                  height={rect.height * scale}
                   stroke="red"
                   strokeWidth={2}
                   draggable
@@ -402,11 +312,11 @@ export default function TestKonva() {
                 />
 
                 <Text
-                  x={rect.x}
-                  y={rect.y - 20}
+                  x={rect.x * scale}
+                  y={(rect.y - 18) * scale}
                   text={rect.label}
                   fill="red"
-                  fontSize={18}
+                  fontSize={14}
                   listening={false}
                 />
 
@@ -415,9 +325,9 @@ export default function TestKonva() {
                     <Line
                       points={[
                         splitAbsX,
-                        rect.y,
+                        rect.y * scale,
                         splitAbsX,
-                        rect.y + rect.height,
+                        (rect.y + rect.height) * scale,
                       ]}
                       stroke="red"
                       strokeWidth={2}
@@ -427,19 +337,22 @@ export default function TestKonva() {
 
                     <Rect
                       x={splitAbsX - 5}
-                      y={rect.y}
+                      y={rect.y * scale}
                       width={10}
-                      height={rect.height}
+                      height={rect.height * scale}
                       fill="rgba(255,0,0,0.15)"
                       stroke="red"
                       strokeWidth={1}
                       draggable
                       dragBoundFunc={(pos) => ({
                         x: Math.max(
-                          rect.x + 10 - 5,
-                          Math.min(pos.x, rect.x + rect.width - 10 - 5)
+                          (rect.x + 10) * scale - 5,
+                          Math.min(
+                            pos.x,
+                            (rect.x + rect.width - 10) * scale - 5
+                          )
                         ),
-                        y: rect.y,
+                        y: rect.y * scale,
                       })}
                       onDragMove={(e) => {
                         updateSplitX(index, (e.target.x() + 5) / scale);
@@ -457,10 +370,10 @@ export default function TestKonva() {
           {newRect && (
             <>
               <Rect
-                x={newRect.x}
-                y={newRect.y}
-                width={newRect.width}
-                height={newRect.height}
+                x={newRect.x * scale}
+                y={newRect.y * scale}
+                width={newRect.width * scale}
+                height={newRect.height * scale}
                 stroke="blue"
                 dash={[5, 5]}
                 strokeWidth={2}
@@ -470,10 +383,10 @@ export default function TestKonva() {
               {newRect.region_type === "ingredient_row" && (
                 <Line
                   points={[
-                    newRect.x + (newRect.split_x ?? 180),
-                    newRect.y,
-                    newRect.x + (newRect.split_x ?? 180),
-                    newRect.y + newRect.height,
+                    (newRect.x + (newRect.split_x ?? 180)) * scale,
+                    newRect.y * scale,
+                    (newRect.x + (newRect.split_x ?? 180)) * scale,
+                    (newRect.y + newRect.height) * scale,
                   ]}
                   stroke="blue"
                   strokeWidth={2}
