@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Stage,
   Layer,
@@ -20,11 +20,97 @@ export default function TestKonva() {
 
   const [recipeScanId, setRecipeScanId] = useState("RSCN_DEMO_001");
 
+  // ------------------------------------------------------------
+  // Load saved regions from DB
+  // ------------------------------------------------------------
+    // ------------------------------------------------------------
+    // Manual region loading only
+    // ------------------------------------------------------------
+    const loadRegions = async () => {
+      try {
+        const token = localStorage.getItem("access_token_admin");
+        const actorId = localStorage.getItem("admin_user_id");
+
+        if (!token) {
+          console.log("No token yet, skipping region load");
+          return;
+        }
+
+        const response = await fetch(
+          `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions?limit=100`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Actor-Id": actorId,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        console.log("Loaded regions:", result);
+
+        if (!response.ok) {
+          console.log("Load regions failed:", result);
+          return;
+        }
+
+        const items = result.items || [];
+
+        const loadedRects = items
+          .map((r) => {
+            const frontendType =
+              r.label === "serves" && r.region_type === "notes"
+                ? "serves"
+                : r.region_type || "unknown";
+
+            const x = Number(r.x);
+            const y = Number(r.y);
+            const width = Number(r.width);
+            const height = Number(r.height);
+
+            if (
+              Number.isNaN(x) ||
+              Number.isNaN(y) ||
+              Number.isNaN(width) ||
+              Number.isNaN(height)
+            ) {
+              return null;
+            }
+
+            return {
+              id: r.id,
+              x: width < 0 ? x + width : x,
+              y: height < 0 ? y + height : y,
+              width: Math.abs(width),
+              height: Math.abs(height),
+              split_x: r.split_x == null ? null : Number(r.split_x),
+              region_type: frontendType,
+              label: r.label || frontendType,
+              ocr_text: r.ocr_text || "",
+              parsed_json: r.parsed_json || null,
+              confidence: r.confidence || null,
+            };
+          })
+          .filter(Boolean);
+
+        setRectangles(loadedRects);
+      } catch (err) {
+        console.error("Load regions error:", err);
+      }
+    };
+
   const handleMouseDown = (e) => {
     if (!image) return;
 
     const stage = e.target.getStage();
-    const pos = stage.getPointerPosition();
+    const rawPos = stage.getPointerPosition();
+
+    const pos = {
+      x: rawPos.x / scale,
+      y: rawPos.y / scale,
+    };
 
     setIsDrawing(true);
 
@@ -112,58 +198,64 @@ export default function TestKonva() {
   const handleSave = async () => {
     try {
       const payload = {
-		regions: rectangles.map((r, index) => ({
+        regions: rectangles.map((r, index) => {
+          const safeWidth = Math.max(10, Math.min(r.width, 1100));
+          const safeHeight = Math.max(10, Math.min(r.height, 1600));
 
-		  // Temporary workaround:
-		  // Save "serves" as region_type="notes"
-		  // until DB enum is expanded later.
-		  region_type:
-			r.region_type === "serves"
-			  ? "notes"
-			  : r.region_type || r.label || "unknown",
+          const safeX = Math.max(0, r.x);
+          const safeY = Math.max(0, r.y);
 
-		  label:
-			r.region_type === "serves"
-			  ? "serves"
-			  : r.label || r.region_type || `Region ${index + 1}`,
-          sort_order: index + 1,
-          x: Math.round(r.x),
-          y: Math.round(r.y),
-          width: Math.round(r.width),
-          height: Math.round(r.height),
-          split_x:
-            r.region_type === "ingredient_row"
-              ? Math.round(r.split_x ?? 180)
-              : null,
-          ocr_text: r.ocr_text || "",
-          parsed_json: r.parsed_json || null,
-          confidence: r.confidence || null,
-        })),
+          return {
+            region_type:
+              r.region_type === "serves"
+                ? "notes"
+                : r.region_type || r.label || "unknown",
+
+            label:
+              r.region_type === "serves"
+                ? "serves"
+                : r.label || r.region_type || `Region ${index + 1}`,
+
+            sort_order: index + 1,
+
+            x: Math.round(safeX),
+            y: Math.round(safeY),
+
+            width: Math.round(safeWidth),
+            height: Math.round(safeHeight),
+
+            split_x:
+              r.region_type === "ingredient_row"
+                ? Math.round(r.split_x ?? 180)
+                : null,
+
+            ocr_text: r.ocr_text || "",
+            parsed_json: r.parsed_json || null,
+            confidence: r.confidence || null,
+          };
+        }),
       };
 
-		const validTypes = [
-		  "title",
-		  "ingredients",
-		  "ingredient_row",
-		  "instruction",
-		  "instructions",
-		  "notes",
-		  "image",
-		  "unknown",
+      const validTypes = [
+        "title",
+        "ingredients",
+        "ingredient_row",
+        "instruction",
+        "instructions",
+        "notes",
+        "image",
+        "unknown",
+      ];
 
-		  // frontend-only temporary type
-		  "serves",
-		];
+      const bad = payload.regions.find(
+        (r) => !validTypes.includes(r.region_type)
+      );
 
-		const bad = payload.regions.find(
-		  (r) => !validTypes.includes(r.region_type)
-		);
-
-		if (bad) {
-		  alert(`Invalid frontend region_type: ${bad.region_type}`);
-		  console.log("Bad region:", bad);
-		  return;
-		}
+      if (bad) {
+        alert(`Invalid frontend region_type: ${bad.region_type}`);
+        console.log("Bad region:", bad);
+        return;
+      }
 
       console.log("Saving payload:", payload);
 
@@ -183,17 +275,17 @@ export default function TestKonva() {
         }
       );
 
-		const text = await response.text();
+      const text = await response.text();
 
-		let result;
-		try {
-		  result = JSON.parse(text);
-		} catch {
-		  result = { raw: text };
-		}
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch {
+        result = { raw: text };
+      }
 
-		console.log("Save status:", response.status);
-		console.log("Save result:", result);
+      console.log("Save status:", response.status);
+      console.log("Save result:", result);
 
       if (!response.ok) {
         alert(`Save failed: ${result.message || result.error || response.status}`);
@@ -207,7 +299,22 @@ export default function TestKonva() {
     }
   };
 
-  return (
+    const MAX_VIEWPORT_WIDTH = Math.min(window.innerWidth - 40, 900);
+
+    const scale = image
+      ? Math.min(1, MAX_VIEWPORT_WIDTH / image.width)
+      : 1;
+
+    const stageWidth = image
+      ? image.width * scale
+      : 1200;
+
+    const stageHeight = image
+      ? image.height * scale
+      : 1800;
+
+   return (
+
     <div style={{ padding: 20 }}>
       <h2>Recipe Scan Region Editor</h2>
 
@@ -231,11 +338,16 @@ export default function TestKonva() {
           flexWrap: "wrap",
         }}
       >
+        <button onClick={loadRegions}>Load</button>
         <button onClick={() => setCurrentLabel("title")}>Title</button>
         <button onClick={() => setCurrentLabel("notes")}>Notes</button>
         <button onClick={() => setCurrentLabel("serves")}>Serves</button>
-        <button onClick={() => setCurrentLabel("ingredient_row")}>Ingredient Row</button>
-        <button onClick={() => setCurrentLabel("instructions")}>Instructions</button>
+        <button onClick={() => setCurrentLabel("ingredient_row")}>
+          Ingredient Row
+        </button>
+        <button onClick={() => setCurrentLabel("instructions")}>
+          Instructions
+        </button>
         <button onClick={handleUndo}>Undo</button>
         <button onClick={handleSave}>Save</button>
       </div>
@@ -245,8 +357,8 @@ export default function TestKonva() {
       </div>
 
       <Stage
-        width={image ? image.width : 1200}
-        height={image ? image.height : 1800}
+        width={stageWidth}
+        height={stageHeight}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -261,25 +373,31 @@ export default function TestKonva() {
               image={image}
               x={0}
               y={0}
+              width={image.width * scale}
+              height={image.height * scale}
               listening={false}
             />
           )}
 
           {rectangles.map((rect, index) => {
-            const splitAbsX = rect.x + (rect.split_x ?? 180);
+            const splitAbsX = (rect.x + (rect.split_x ?? 180)) * scale;
 
             return (
               <React.Fragment key={index}>
                 <Rect
-                  x={rect.x}
-                  y={rect.y}
-                  width={rect.width}
-                  height={rect.height}
+                 x={rect.x * scale}
+                 y={rect.y * scale}
+                 width={rect.width * scale}
+                 height={rect.height * scale}
                   stroke="red"
                   strokeWidth={2}
                   draggable
                   onDragEnd={(e) => {
-                    updateRectanglePosition(index, e.target.x(), e.target.y());
+                    updateRectanglePosition(
+                      index,
+                      e.target.x() / scale,
+                      e.target.y() / scale
+                    );
                   }}
                 />
 
@@ -324,10 +442,10 @@ export default function TestKonva() {
                         y: rect.y,
                       })}
                       onDragMove={(e) => {
-                        updateSplitX(index, e.target.x() + 5);
+                        updateSplitX(index, (e.target.x() + 5) / scale);
                       }}
                       onDragEnd={(e) => {
-                        updateSplitX(index, e.target.x() + 5);
+                        updateSplitX(index, (e.target.x() + 5) / scale);
                       }}
                     />
                   </>
