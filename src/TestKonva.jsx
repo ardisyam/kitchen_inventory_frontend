@@ -36,6 +36,10 @@ export default function TestKonva() {
   };
 
   const loadRegions = async () => {
+    if (!image) {
+      alert("Please choose an image first.");
+      return;
+    }
     try {
       const token = localStorage.getItem("access_token_admin");
       const actorId = localStorage.getItem("admin_user_id");
@@ -251,7 +255,7 @@ export default function TestKonva() {
       />
 
       <div style={{ marginTop: 10, marginBottom: 10, display: "flex", gap: 8 }}>
-        <button onClick={loadRegions}>Load</button>
+        <button onClick={loadRegions} disabled={!image}>Load</button>
         <button onClick={() => setCurrentLabel("title")}>Title</button>
         <button onClick={() => setCurrentLabel("notes")}>Notes</button>
         <button onClick={() => setCurrentLabel("serves")}>Serves</button>
