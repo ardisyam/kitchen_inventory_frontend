@@ -18,7 +18,7 @@ export default function TestKonva() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentLabel, setCurrentLabel] = useState("title");
 
-  const [recipeScanId] = useState("RSCN_DEMO_001");
+  const [recipeScanId, setRecipeScanId] = useState(null);
 
   const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
 
@@ -246,16 +246,51 @@ export default function TestKonva() {
       <input
         type="file"
         accept="image/*"
-        onChange={(e) => {
+        onChange={async (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
+
           setImageUrl(URL.createObjectURL(file));
           setRectangles([]);
+          setRecipeScanId(null);
+
+          try {
+            const token = localStorage.getItem("access_token_admin");
+            const actorId = localStorage.getItem("admin_user_id");
+
+            const response = await fetch("http://localhost:5000/api/recipe-scans", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+                "X-Actor-Id": actorId,
+              },
+              body: JSON.stringify({
+                source_type: "image_upload",
+                original_filename: file.name,
+                notes: "Created from region editor",
+              }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+              console.log("Create recipe scan failed:", result);
+              alert("Failed to create recipe scan.");
+              return;
+            }
+
+            setRecipeScanId(result.item?.id || result.id);
+            console.log("Created recipe_scan_id:", result.item?.id || result.id);
+          } catch (err) {
+            console.error("Create recipe scan error:", err);
+            alert("Failed to create recipe scan.");
+          }
         }}
       />
 
       <div style={{ marginTop: 10, marginBottom: 10, display: "flex", gap: 8 }}>
-        <button onClick={loadRegions} disabled={!image}>Load</button>
+        <button onClick={loadRegions} disabled={!image || !recipeScanId}>Load</button>
         <button onClick={() => setCurrentLabel("title")}>Title</button>
         <button onClick={() => setCurrentLabel("notes")}>Notes</button>
         <button onClick={() => setCurrentLabel("serves")}>Serves</button>
@@ -266,7 +301,7 @@ export default function TestKonva() {
           Instructions
         </button>
         <button onClick={handleUndo}>Undo</button>
-        <button onClick={handleSave}>Save</button>
+        <button onClick={handleSave} disabled={!recipeScanId}>Save</button>
       </div>
 
       <div style={{ marginBottom: 10 }}>
