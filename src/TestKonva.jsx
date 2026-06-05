@@ -281,6 +281,35 @@ export default function TestKonva() {
     }
   };
 
+    const uploadRecipeScanImage = async (scanId, file) => {
+      const token = localStorage.getItem("access_token_admin");
+      const actorId = localStorage.getItem("admin_user_id");
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch(
+        `http://localhost:5000/api/recipe-scans/${scanId}/image`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Actor-Id": actorId,
+          },
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.log("Image upload failed:", result);
+        throw new Error(result.message || "Image upload failed");
+      }
+
+      return result;
+    };
+
   return (
     <div style={{ padding: 20 }}>
       <h2>Recipe Scan Region Editor</h2>
@@ -292,27 +321,16 @@ export default function TestKonva() {
           const file = e.target.files?.[0];
           if (!file) return;
 
-//           const resizedFile = await resizeImageFile(file);
-//             console.log(
-//               "Original:",
-//               file.name,
-//               Math.round(file.size / 1024),
-//               "KB"
-//             );
-//
-//             console.log(
-//               "Resized:",
-//               resizedFile.name,
-//               Math.round(resizedFile.size / 1024),
-//               "KB"
-//             );
-            
-          setImageUrl(URL.createObjectURL(resizedFile));
-          
-          setRectangles([]);
-          setRecipeScanId(null);
-
           try {
+            const resizedFile = await resizeImageFile(file);
+
+            console.log("Original:", file.name, Math.round(file.size / 1024), "KB");
+            console.log("Resized:", resizedFile.name, Math.round(resizedFile.size / 1024), "KB");
+        
+            setImageUrl(URL.createObjectURL(resizedFile));
+            setRectangles([]);
+            setRecipeScanId(null);
+
             const token = localStorage.getItem("access_token_admin");
             const actorId = localStorage.getItem("admin_user_id");
 
@@ -324,8 +342,10 @@ export default function TestKonva() {
                 "X-Actor-Id": actorId,
               },
               body: JSON.stringify({
-                source_type: "image_upload",
-                original_filename: file.name,
+                source_image_name: resizedFile.name,
+                image_width: null,
+                image_height: null,
+                status: "draft",
                 notes: "Created from region editor",
               }),
             });
@@ -338,11 +358,17 @@ export default function TestKonva() {
               return;
             }
 
-            setRecipeScanId(result.item?.id || result.id);
-            console.log("Created recipe_scan_id:", result.item?.id || result.id);
+            const scanId = result.item?.id || result.id;
+
+            setRecipeScanId(scanId);
+            console.log("Created recipe_scan_id:", scanId);
+
+            await uploadRecipeScanImage(scanId, resizedFile);
+
+            console.log("Uploaded resized image for scan:", scanId);
           } catch (err) {
-            console.error("Create recipe scan error:", err);
-            alert("Failed to create recipe scan.");
+            console.error("Create/upload recipe scan error:", err);
+            alert("Failed to create/upload recipe scan.");
           }
         }}
       />
@@ -360,6 +386,7 @@ export default function TestKonva() {
         </button>
         <button onClick={handleUndo}>Undo</button>
         <button onClick={handleSave} disabled={!recipeScanId}>Save</button>
+        <button onClick={() => setRectangles([])}>Clear</button>
       </div>
 
       <div style={{ marginBottom: 10 }}>
