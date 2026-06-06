@@ -378,12 +378,9 @@ export default function TestKonva() {
         <button onClick={() => setCurrentLabel("title")}>Title</button>
         <button onClick={() => setCurrentLabel("notes")}>Notes</button>
         <button onClick={() => setCurrentLabel("serves")}>Serves</button>
-        <button onClick={() => setCurrentLabel("ingredient_row")}>
-          Ingredient Row
-        </button>
-        <button onClick={() => setCurrentLabel("instructions")}>
-          Instructions
-        </button>
+{/*         <button onClick={() => setCurrentLabel("ingredient_row")}>Ingredient Row</button> */}
+        <button onClick={() => setCurrentLabel("ingredients")}>Ingredients</button>
+        <button onClick={() => setCurrentLabel("instructions")}>Instructions</button>
         <button onClick={handleUndo}>Undo</button>
         <button onClick={handleSave} disabled={!recipeScanId}>Save</button>
         <button onClick={() => setRectangles([])}>Clear</button>
