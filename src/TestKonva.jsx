@@ -12,18 +12,17 @@ import useImage from "use-image";
 export default function TestKonva() {
   const [imageUrl, setImageUrl] = useState(null);
   const [image] = useImage(imageUrl);
-
   const [rectangles, setRectangles] = useState([]);
   const [newRect, setNewRect] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentLabel, setCurrentLabel] = useState("title");
-
   const [recipeScanId, setRecipeScanId] = useState(null);
 
+  const [ocrResult, setOcrResult] = useState(null);
+  const [ocrSections, setOcrSections] = useState(null);
+
   const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
-
   const scale = image ? Math.min(1, maxViewportWidth / image.width) : 1;
-
   const stageWidth = image ? image.width * scale : 1200;
   const stageHeight = image ? image.height * scale : 1800;
 
@@ -310,6 +309,47 @@ export default function TestKonva() {
       return result;
     };
 
+
+
+  const handleRunOcr = async () => {
+    if (!recipeScanId) {
+      alert("Please create or load a recipe scan first.");
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("access_token_admin");
+      const actorId = localStorage.getItem("admin_user_id");
+
+      const response = await fetch(
+        `http://localhost:5000/api/recipe-scans/${recipeScanId}/ocr`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "X-Actor-Id": actorId,
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.log("OCR failed:", result);
+        alert(`OCR failed: ${result.message || result.error || "Unknown error"}`);
+        return;
+      }
+
+      setOcrResult(result);
+      setOcrSections(result.sections || null);
+
+      console.log("OCR completed:", result);
+    } catch (err) {
+      console.error("OCR error:", err);
+      alert("OCR failed.");
+    }
+  };
+
   return (
     <div style={{ padding: 20 }}>
       <h2>Recipe Scan Region Editor</h2>
@@ -326,7 +366,7 @@ export default function TestKonva() {
 
             console.log("Original:", file.name, Math.round(file.size / 1024), "KB");
             console.log("Resized:", resizedFile.name, Math.round(resizedFile.size / 1024), "KB");
-        
+
             setImageUrl(URL.createObjectURL(resizedFile));
             setRectangles([]);
             setRecipeScanId(null);
@@ -383,8 +423,179 @@ export default function TestKonva() {
         <button onClick={() => setCurrentLabel("instructions")}>Instructions</button>
         <button onClick={handleUndo}>Undo</button>
         <button onClick={handleSave} disabled={!recipeScanId}>Save</button>
+        <button onClick={handleRunOcr} disabled={!recipeScanId}>Run OCR</button>
         <button onClick={() => setRectangles([])}>Clear</button>
       </div>
+
+
+
+      {ocrSections && (
+        <div
+          style={{
+            marginTop: 20,
+            marginBottom: 20,
+            padding: 16,
+            border: "1px solid #ccc",
+            borderRadius: 8,
+            background: "#fafafa",
+          }}
+        >
+          <h2>OCR Review</h2>
+
+          <div style={{ marginBottom: 12 }}>
+            <label>
+              <b>Title</b>
+            </label>
+            <input
+              value={ocrSections.title || ""}
+              onChange={(e) =>
+                setOcrSections({
+                  ...ocrSections,
+                  title: e.target.value,
+                })
+              }
+              style={{ display: "block", width: "100%", marginTop: 4 }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label>
+              <b>Serves</b>
+            </label>
+            <input
+              value={ocrSections.serves || ""}
+              onChange={(e) =>
+                setOcrSections({
+                  ...ocrSections,
+                  serves: e.target.value,
+                })
+              }
+              style={{ display: "block", width: 120, marginTop: 4 }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label>
+              <b>Notes</b>
+            </label>
+            <textarea
+              value={ocrSections.notes || ""}
+              onChange={(e) =>
+                setOcrSections({
+                  ...ocrSections,
+                  notes: e.target.value,
+                })
+              }
+              rows={4}
+              style={{ display: "block", width: "100%", marginTop: 4 }}
+            />
+          </div>
+
+          <h3>Ingredients</h3>
+
+          <div style={{ display: "grid", gridTemplateColumns: "80px 90px 80px 90px 1fr", gap: 8, fontWeight: "bold", marginBottom: 6 }}>
+            <div>Amount</div>
+            <div>Unit</div>
+            <div>Alt Amt</div>
+            <div>Alt Unit</div>
+            <div>Ingredient</div>
+          </div>
+
+          {(ocrSections.ingredients || []).map((item, index) => (
+            <div
+              key={index}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "80px 90px 80px 90px 1fr",
+                gap: 8,
+                marginBottom: 8,
+              }}
+            >
+              <input
+                value={item.amount_text || ""}
+                onChange={(e) => {
+                  const ingredients = [...(ocrSections.ingredients || [])];
+                  ingredients[index] = {
+                    ...ingredients[index],
+                    amount_text: e.target.value,
+                  };
+                  setOcrSections({ ...ocrSections, ingredients });
+                }}
+              />
+
+              <input
+                value={item.measure_text || ""}
+                onChange={(e) => {
+                  const ingredients = [...(ocrSections.ingredients || [])];
+                  ingredients[index] = {
+                    ...ingredients[index],
+                    measure_text: e.target.value,
+                  };
+                  setOcrSections({ ...ocrSections, ingredients });
+                }}
+              />
+
+              <input
+                value={item.alt_amount_text || ""}
+                onChange={(e) => {
+                  const ingredients = [...(ocrSections.ingredients || [])];
+                  ingredients[index] = {
+                    ...ingredients[index],
+                    alt_amount_text: e.target.value,
+                  };
+                  setOcrSections({ ...ocrSections, ingredients });
+                }}
+              />
+
+              <input
+                value={item.alt_measure_text || ""}
+                onChange={(e) => {
+                  const ingredients = [...(ocrSections.ingredients || [])];
+                  ingredients[index] = {
+                    ...ingredients[index],
+                    alt_measure_text: e.target.value,
+                  };
+                  setOcrSections({ ...ocrSections, ingredients });
+                }}
+              />
+
+              <input
+                value={item.ingredient_text || ""}
+                onChange={(e) => {
+                  const ingredients = [...(ocrSections.ingredients || [])];
+                  ingredients[index] = {
+                    ...ingredients[index],
+                    ingredient_text: e.target.value,
+                  };
+                  setOcrSections({ ...ocrSections, ingredients });
+                }}
+              />
+            </div>
+          ))}
+
+          <h3>Instructions</h3>
+
+          {(ocrSections.instruction_steps || []).map((step, index) => (
+            <div key={index} style={{ marginBottom: 12 }}>
+              <label>
+                <b>Step {index + 1}</b>
+              </label>
+              <textarea
+                value={step || ""}
+                onChange={(e) => {
+                  const instruction_steps = [
+                    ...(ocrSections.instruction_steps || []),
+                  ];
+                  instruction_steps[index] = e.target.value;
+                  setOcrSections({ ...ocrSections, instruction_steps });
+                }}
+                rows={4}
+                style={{ display: "block", width: "100%", marginTop: 4 }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
 
       <div style={{ marginBottom: 10 }}>
         Current Label: <b>{currentLabel}</b>
