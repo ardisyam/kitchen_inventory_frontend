@@ -350,6 +350,48 @@ export default function TestKonva() {
     }
   };
 
+    const saveOcrReview = async () => {
+      if (!recipeScanId || !ocrSections) {
+        alert("No OCR review to save.");
+        return;
+      }
+
+//     console.log("Saving OCR sections:", ocrSections);
+//     console.log("Saving ingredients:", ocrSections?.ingredients);
+
+      try {
+        const token = localStorage.getItem("access_token_admin");
+        const actorId = localStorage.getItem("admin_user_id");
+
+        const response = await fetch(
+          `http://localhost:5000/api/recipe-scans/${recipeScanId}/parsed-json`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+              "X-Actor-Id": actorId,
+            },
+            body: JSON.stringify(ocrSections),
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Save OCR review failed:", result);
+          alert(result.message || "Save OCR review failed.");
+          return;
+        }
+
+        alert("OCR review saved.");
+      } catch (err) {
+        console.error("Save OCR review error:", err);
+        alert("Save OCR review failed.");
+      }
+    };
+
+
   return (
     <div style={{ padding: 20 }}>
       <h2>Recipe Scan Region Editor</h2>
@@ -441,6 +483,13 @@ export default function TestKonva() {
           }}
         >
           <h2>OCR Review</h2>
+            <button
+              onClick={saveOcrReview}
+              disabled={!recipeScanId || !ocrSections}
+              style={{ marginBottom: 12 }}
+            >
+              Save OCR Review
+            </button>
 
           <div style={{ marginBottom: 12 }}>
             <label>
