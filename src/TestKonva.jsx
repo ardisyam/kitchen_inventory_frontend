@@ -17,6 +17,7 @@ export default function TestKonva() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentLabel, setCurrentLabel] = useState("title");
   const [recipeScanId, setRecipeScanId] = useState(null);
+  const [recentScans, setRecentScans] = useState([]);
 
   const [ocrResult, setOcrResult] = useState(null);
   const [ocrSections, setOcrSections] = useState(null);
@@ -420,6 +421,36 @@ export default function TestKonva() {
       }
     };
 
+    const loadRecentScans = async () => {
+      try {
+        const token = localStorage.getItem("access_token_admin");
+        const actorId = localStorage.getItem("admin_user_id");
+
+        const response = await fetch(
+          "http://localhost:5000/api/recipe-scans?limit=20",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Actor-Id": actorId,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Load recent scans failed:", result);
+          alert("Load recent scans failed.");
+          return;
+        }
+
+        setRecentScans(result.items || []);
+      } catch (err) {
+        console.error("Load recent scans error:", err);
+        alert("Load recent scans failed.");
+      }
+    };
+
 
   return (
     <div style={{ padding: 20 }}>
@@ -485,6 +516,7 @@ export default function TestKonva() {
       />
 
       <div style={{ marginTop: 10, marginBottom: 10, display: "flex", gap: 8 }}>
+       <button onClick={loadRecentScans}>Recent Scans</button>
           <input
             placeholder="Recipe Scan ID"
             value={recipeScanId || ""}
@@ -503,7 +535,49 @@ export default function TestKonva() {
         <button onClick={() => setRectangles([])}>Clear</button>
       </div>
 
+        {recentScans.length > 0 && (
+          <div
+            style={{
+              marginTop: 12,
+              marginBottom: 12,
+              padding: 12,
+              border: "1px solid #ccc",
+              borderRadius: 8,
+              background: "#fafafa",
+            }}
+          >
+            <h3>Recent Scans</h3>
 
+            {recentScans.map((scan) => (
+              <div
+                key={scan.id}
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setRecipeScanId(scan.id);
+                    console.log("Selected existing scan:", scan.id);
+                  }}
+                >
+                  Select
+                </button>
+
+                <span>
+                  <b>{scan.source_image_name || "(no image name)"}</b>
+                  {" — "}
+                  {scan.status}
+                  {" — "}
+                  {scan.id}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
       {ocrSections && (
         <div
