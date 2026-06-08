@@ -77,6 +77,9 @@ export default function TestKonva() {
     };
 
   const loadRegions = async () => {
+    console.log("LOAD REGIONS CLICKED");
+    console.log("image:", image);
+    console.log("recipeScanId:", recipeScanId);
     if (!image) {
       alert("Please choose an image first.");
       return;
@@ -133,6 +136,32 @@ export default function TestKonva() {
         .filter(Boolean);
 
       setRectangles(loadedRects);
+
+        const scanResponse = await fetch(
+          `http://localhost:5000/api/recipe-scans/${recipeScanId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Actor-Id": actorId,
+            },
+          }
+        );
+
+        const scanResult = await scanResponse.json();
+
+        if (!scanResponse.ok) {
+          console.log("Load scan failed:", scanResult);
+          return;
+        }
+
+        if (scanResult.parsed_json) {
+          setOcrSections(scanResult.parsed_json);
+          console.log("Loaded saved OCR review:", scanResult.parsed_json);
+        } else {
+          setOcrSections(null);
+          console.log("No saved OCR review found.");
+        }
+      
     } catch (err) {
       console.error("Load regions error:", err);
     }
@@ -456,11 +485,16 @@ export default function TestKonva() {
       />
 
       <div style={{ marginTop: 10, marginBottom: 10, display: "flex", gap: 8 }}>
+          <input
+            placeholder="Recipe Scan ID"
+            value={recipeScanId || ""}
+            onChange={(e) => setRecipeScanId(e.target.value)}
+            style={{ width: 280 }}
+          />
         <button onClick={loadRegions} disabled={!image || !recipeScanId}>Load</button>
         <button onClick={() => setCurrentLabel("title")}>Title</button>
         <button onClick={() => setCurrentLabel("notes")}>Notes</button>
         <button onClick={() => setCurrentLabel("serves")}>Serves</button>
-{/*         <button onClick={() => setCurrentLabel("ingredient_row")}>Ingredient Row</button> */}
         <button onClick={() => setCurrentLabel("ingredients")}>Ingredients</button>
         <button onClick={() => setCurrentLabel("instructions")}>Instructions</button>
         <button onClick={handleUndo}>Undo</button>
