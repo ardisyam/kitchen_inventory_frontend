@@ -28,6 +28,8 @@ export default function Login() {
       localStorage.setItem("access_token_admin", result.access_token);
       localStorage.setItem("account_id", result.account_id);
 
+      window.location.reload();
+
       setMessage("Login successful");
     } catch (err) {
       console.error(err);
