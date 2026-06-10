@@ -88,18 +88,15 @@ export default function TestKonva() {
     }
     try {
       const token = localStorage.getItem("access_token_admin");
-      const actorId = localStorage.getItem("admin_user_id");
 
       const response = await fetch(
         `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions?limit=100`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "X-Actor-Id": actorId,
           },
         }
       );
-
       const result = await response.json();
 
       if (!response.ok) {
@@ -144,7 +141,6 @@ export default function TestKonva() {
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "X-Actor-Id": actorId,
             },
           }
         );
@@ -282,7 +278,6 @@ export default function TestKonva() {
       };
 
       const token = localStorage.getItem("access_token_admin");
-      const actorId = localStorage.getItem("admin_user_id");
 
       const response = await fetch(
         `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions/bulk`,
@@ -291,7 +286,6 @@ export default function TestKonva() {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
-            "X-Actor-Id": actorId,
           },
           body: JSON.stringify(payload),
         }
@@ -313,7 +307,6 @@ export default function TestKonva() {
 
     const uploadRecipeScanImage = async (scanId, file) => {
       const token = localStorage.getItem("access_token_admin");
-      const actorId = localStorage.getItem("admin_user_id");
 
       const formData = new FormData();
       formData.append("image", file);
@@ -324,7 +317,6 @@ export default function TestKonva() {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            "X-Actor-Id": actorId,
           },
           body: formData,
         }
@@ -350,7 +342,6 @@ export default function TestKonva() {
 
     try {
       const token = localStorage.getItem("access_token_admin");
-      const actorId = localStorage.getItem("admin_user_id");
 
       const response = await fetch(
         `http://localhost:5000/api/recipe-scans/${recipeScanId}/ocr`,
@@ -358,7 +349,6 @@ export default function TestKonva() {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            "X-Actor-Id": actorId,
           },
         }
       );
@@ -387,12 +377,8 @@ export default function TestKonva() {
         return;
       }
 
-//     console.log("Saving OCR sections:", ocrSections);
-//     console.log("Saving ingredients:", ocrSections?.ingredients);
-
       try {
         const token = localStorage.getItem("access_token_admin");
-        const actorId = localStorage.getItem("admin_user_id");
 
         const response = await fetch(
           `http://localhost:5000/api/recipe-scans/${recipeScanId}/parsed-json`,
@@ -401,7 +387,6 @@ export default function TestKonva() {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
-              "X-Actor-Id": actorId,
             },
             body: JSON.stringify(ocrSections),
           }
@@ -425,14 +410,12 @@ export default function TestKonva() {
     const loadRecentScans = async () => {
       try {
         const token = localStorage.getItem("access_token_admin");
-        const actorId = localStorage.getItem("admin_user_id");
 
         const response = await fetch(
           "http://localhost:5000/api/recipe-scans?limit=20",
           {
             headers: {
               Authorization: `Bearer ${token}`,
-              "X-Actor-Id": actorId,
             },
           }
         );
@@ -460,15 +443,13 @@ export default function TestKonva() {
 
       try {
         const token = localStorage.getItem("access_token_admin");
-        const actorId = localStorage.getItem("admin_user_id");
 
         const response = await fetch("http://localhost:5000/api/recipe-scans", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            "X-Actor-Id": actorId,
-          },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
             body: JSON.stringify({
               house_id: localStorage.getItem("house_id_under_test"),
               source_image_name: selectedFile.name,
@@ -515,7 +496,6 @@ export default function TestKonva() {
 
       try {
         const token = localStorage.getItem("access_token_admin");
-        const actorId = localStorage.getItem("admin_user_id");
 
         const response = await fetch(
           `http://localhost:5000/api/recipe-scans/${recipeScanId}/convert-to-recipe`,
@@ -523,7 +503,6 @@ export default function TestKonva() {
             method: "POST",
             headers: {
               Authorization: `Bearer ${token}`,
-              "X-Actor-Id": actorId,
             },
           }
         );

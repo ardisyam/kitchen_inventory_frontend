@@ -1,7 +1,7 @@
-import TestKonva from './TestKonva';
+import Login from "./Login";
 
 function App() {
-  return <TestKonva />;
+  return <Login />;
 }
 
 export default App;
