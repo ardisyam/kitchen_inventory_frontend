@@ -18,6 +18,7 @@ export default function TestKonva() {
   const [currentLabel, setCurrentLabel] = useState("title");
   const [recipeScanId, setRecipeScanId] = useState(null);
   const [recentScans, setRecentScans] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const [ocrResult, setOcrResult] = useState(null);
   const [ocrSections, setOcrSections] = useState(null);
@@ -276,7 +277,7 @@ export default function TestKonva() {
 
           ocr_text: r.ocr_text || "",
           parsed_json: r.parsed_json || null,
-          confidence: r.confidence || null,
+          confidence: r.confidence ?? null,
         })),
       };
 
@@ -451,6 +452,98 @@ export default function TestKonva() {
       }
     };
 
+    const createNewScan = async () => {
+      if (!selectedFile) {
+        alert("Please choose an image first.");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("access_token_admin");
+        const actorId = localStorage.getItem("admin_user_id");
+
+        const response = await fetch("http://localhost:5000/api/recipe-scans", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "X-Actor-Id": actorId,
+          },
+            body: JSON.stringify({
+              house_id: localStorage.getItem("house_id_under_test"),
+              source_image_name: selectedFile.name,
+              image_width: image?.width || null,
+              image_height: image?.height || null,
+              status: "draft",
+              notes: "Created from region editor",
+            }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Create recipe scan failed:", result);
+          alert("Failed to create recipe scan.");
+          return;
+        }
+
+        const scanId = result.item?.id || result.data?.id || result.id;
+
+        if (!scanId) {
+          console.log("Could not find scan id:", result);
+          alert("Recipe scan created, but scan id was not found.");
+          return;
+        }
+
+        setRecipeScanId(scanId);
+        console.log("Created recipe_scan_id:", scanId);
+
+        await uploadRecipeScanImage(scanId, selectedFile);
+
+        console.log("Uploaded resized image for scan:", scanId);
+      } catch (err) {
+        console.error("Create/upload recipe scan error:", err);
+        alert("Failed to create/upload recipe scan.");
+      }
+    };
+
+    const handleConvertToRecipe = async () => {
+      if (!recipeScanId) {
+        alert("Please create or load a recipe scan first.");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("access_token_admin");
+        const actorId = localStorage.getItem("admin_user_id");
+
+        const response = await fetch(
+          `http://localhost:5000/api/recipe-scans/${recipeScanId}/convert-to-recipe`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Actor-Id": actorId,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Convert failed:", result);
+          alert(result.message || "Convert failed.");
+          return;
+        }
+
+        alert(`Converted to recipe: ${result.recipe_id}`);
+      } catch (err) {
+        console.error("Convert error:", err);
+        alert("Convert failed.");
+      }
+    };
+
+
 
   return (
     <div style={{ padding: 20 }}>
@@ -469,54 +562,24 @@ export default function TestKonva() {
             console.log("Original:", file.name, Math.round(file.size / 1024), "KB");
             console.log("Resized:", resizedFile.name, Math.round(resizedFile.size / 1024), "KB");
 
+            setSelectedFile(resizedFile);
             setImageUrl(URL.createObjectURL(resizedFile));
             setRectangles([]);
             setRecipeScanId(null);
+            setOcrSections(null);
+            setOcrResult(null);
 
-            const token = localStorage.getItem("access_token_admin");
-            const actorId = localStorage.getItem("admin_user_id");
-
-            const response = await fetch("http://localhost:5000/api/recipe-scans", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-                "X-Actor-Id": actorId,
-              },
-              body: JSON.stringify({
-                source_image_name: resizedFile.name,
-                image_width: null,
-                image_height: null,
-                status: "draft",
-                notes: "Created from region editor",
-              }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-              console.log("Create recipe scan failed:", result);
-              alert("Failed to create recipe scan.");
-              return;
-            }
-
-            const scanId = result.item?.id || result.id;
-
-            setRecipeScanId(scanId);
-            console.log("Created recipe_scan_id:", scanId);
-
-            await uploadRecipeScanImage(scanId, resizedFile);
-
-            console.log("Uploaded resized image for scan:", scanId);
+            console.log("Image loaded only. Click Create New Scan to create DB record.");
           } catch (err) {
-            console.error("Create/upload recipe scan error:", err);
-            alert("Failed to create/upload recipe scan.");
+            console.error("Image load/resize error:", err);
+            alert("Failed to load image.");
           }
         }}
       />
 
       <div style={{ marginTop: 10, marginBottom: 10, display: "flex", gap: 8 }}>
        <button onClick={loadRecentScans}>Recent Scans</button>
+       <button onClick={createNewScan}disabled={!image || !selectedFile}>Create New Scan</button>
           <input
             placeholder="Recipe Scan ID"
             value={recipeScanId || ""}
@@ -532,6 +595,7 @@ export default function TestKonva() {
         <button onClick={handleUndo}>Undo</button>
         <button onClick={handleSave} disabled={!recipeScanId}>Save</button>
         <button onClick={handleRunOcr} disabled={!recipeScanId}>Run OCR</button>
+        <button onClick={handleConvertToRecipe} disabled={!recipeScanId}>Convert to Recipe</button>
         <button onClick={() => setRectangles([])}>Clear</button>
       </div>
 
