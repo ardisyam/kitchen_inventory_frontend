@@ -23,6 +23,11 @@ export default function TestKonva() {
   const [ocrResult, setOcrResult] = useState(null);
   const [ocrSections, setOcrSections] = useState(null);
 
+  const [createdRecipeId, setCreatedRecipeId] = useState(null);
+  const [ingredientMatches, setIngredientMatches] = useState({});
+  const [itemSuggestions, setItemSuggestions] = useState({});
+  const [showIngredientMatching, setShowIngredientMatching] = useState(false);
+
   const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
   const scale = image ? Math.min(1, maxViewportWidth / image.width) : 1;
   const stageWidth = image ? image.width * scale : 1200;
@@ -488,6 +493,127 @@ export default function TestKonva() {
       }
     };
 
+    const cleanIngredientSearchText = (text) => {
+      return (text || "")
+        .toLowerCase()
+        .replace(/\b(raw|fresh|dried|finely|grated|extra|virgin|leaves|leaf)\b/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    };
+
+    const searchItemsForIngredient = async (index, ingredientText) => {
+      const text = cleanIngredientSearchText(ingredientText);
+
+      if (!text) {
+        setItemSuggestions((prev) => ({
+          ...prev,
+          [index]: [],
+        }));
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("access_token_admin");
+
+        const response = await fetch(
+          `http://localhost:5000/api/items?search=${encodeURIComponent(text)}&limit=10`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Item search failed:", result);
+          alert(result.message || "Item search failed.");
+          return;
+        }
+
+        const items = result.items || [];
+
+        setItemSuggestions((prev) => ({
+          ...prev,
+          [index]: items,
+        }));
+
+        if (items.length === 1) {
+          setIngredientMatches((prev) => ({
+            ...prev,
+            [index]: items[0].id,
+          }));
+        }
+      } catch (err) {
+        console.error("Item search error:", err);
+        alert("Item search failed.");
+      }
+    };
+
+    const autoMatchIngredients = async () => {
+      const ingredients = ocrSections?.ingredients || [];
+
+      for (let i = 0; i < ingredients.length; i += 1) {
+        await searchItemsForIngredient(i, ingredients[i].ingredient_text || "");
+      }
+    };
+
+    const saveRecipeItemsPhase1 = async () => {
+      if (!createdRecipeId) {
+        alert("No recipe id found.");
+        return;
+      }
+
+      const ingredients = ocrSections?.ingredients || [];
+
+      try {
+        const token = localStorage.getItem("access_token_admin");
+
+        for (let i = 0; i < ingredients.length; i += 1) {
+          const selectedItemId = ingredientMatches[i];
+
+          if (!selectedItemId) {
+            continue;
+          }
+
+          const ingredient = ingredients[i];
+
+          const payload = {
+            recipe_id: createdRecipeId,
+            item_id: selectedItemId,
+            quantity: 1,
+            measure_id: "MEAS_EA",
+            sort_order: (i + 1) * 10,
+            instruction: ingredient.ingredient_text || "",
+          };
+
+          const response = await fetch("http://localhost:5000/api/recipe-items", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            console.log("Create recipe item failed:", result);
+            alert(result.message || "Create recipe item failed.");
+            return;
+          }
+        }
+
+        alert("Recipe items saved.");
+      } catch (err) {
+        console.error("Save recipe items error:", err);
+        alert("Save recipe items failed.");
+      }
+    };
+
+
     const handleConvertToRecipe = async () => {
       if (!recipeScanId) {
         alert("Please create or load a recipe scan first.");
@@ -515,13 +641,104 @@ export default function TestKonva() {
           return;
         }
 
-        alert(`Converted to recipe: ${result.recipe_id}`);
+        const newRecipeId = result.recipe_id || result.id || result.item?.id;
+
+        setCreatedRecipeId(newRecipeId);
+        setShowIngredientMatching(true);
+
+        alert(`Converted to recipe: ${newRecipeId}. Now match ingredients to items.`);
       } catch (err) {
         console.error("Convert error:", err);
         alert("Convert failed.");
       }
     };
 
+//     const searchItemsForIngredient = async (index, ingredientText) => {
+//       if (!ingredientText) return;
+//
+//       try {
+//         const token = localStorage.getItem("access_token_admin");
+//
+//         const response = await fetch(
+//           `http://localhost:5000/api/items?search=${encodeURIComponent(ingredientText)}&limit=10`,
+//           {
+//             headers: {
+//               Authorization: `Bearer ${token}`,
+//             },
+//           }
+//         );
+//
+//         const result = await response.json();
+//
+//         if (!response.ok) {
+//           console.log("Item search failed:", result);
+//           alert(result.message || "Item search failed.");
+//           return;
+//         }
+//
+//         setItemSuggestions((prev) => ({
+//           ...prev,
+//           [index]: result.items || [],
+//         }));
+//       } catch (err) {
+//         console.error("Item search error:", err);
+//         alert("Item search failed.");
+//       }
+//     };
+//
+//     const saveRecipeItemsPhase1 = async () => {
+//       if (!createdRecipeId) {
+//         alert("No recipe id found.");
+//         return;
+//       }
+//
+//       try {
+//         const token = localStorage.getItem("access_token_admin");
+//
+//         const ingredients = ocrSections?.ingredients || [];
+//
+//         for (let i = 0; i < ingredients.length; i += 1) {
+//           const selectedItemId = ingredientMatches[i];
+//
+//           if (!selectedItemId) {
+//             continue;
+//           }
+//
+//           const ingredient = ingredients[i];
+//
+//           const payload = {
+//             recipe_id: createdRecipeId,
+//             item_id: selectedItemId,
+//             quantity: 1,
+//             measure_id: "MEAS_EA",
+//             sort_order: (i + 1) * 10,
+//             instruction: ingredient.ingredient_text || "",
+//           };
+//
+//           const response = await fetch("http://localhost:5000/api/recipe-items", {
+//             method: "POST",
+//             headers: {
+//               "Content-Type": "application/json",
+//               Authorization: `Bearer ${token}`,
+//             },
+//             body: JSON.stringify(payload),
+//           });
+//
+//           const result = await response.json();
+//
+//           if (!response.ok) {
+//             console.log("Create recipe item failed:", result);
+//             alert(result.message || "Create recipe item failed.");
+//             return;
+//           }
+//         }
+//
+//         alert("Recipe items saved.");
+//       } catch (err) {
+//         console.error("Save recipe items error:", err);
+//         alert("Save recipe items failed.");
+//       }
+//     };
 
 
   return (
@@ -796,6 +1013,108 @@ export default function TestKonva() {
           ))}
         </div>
       )}
+
+
+        {showIngredientMatching && (
+          <div
+            style={{
+              marginTop: 20,
+              marginBottom: 20,
+              padding: 16,
+              border: "1px solid #ccc",
+              borderRadius: 8,
+              background: "#f7f7f7",
+            }}
+          >
+            <h2>Ingredient Item Matching</h2>
+
+            <div style={{ marginBottom: 12 }}>
+              <b>Recipe ID:</b> {createdRecipeId || "(not found)"}
+            </div>
+
+            <button
+              onClick={autoMatchIngredients}
+              style={{ marginBottom: 12 }}
+            >
+              Auto Match Ingredients
+            </button>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 120px 260px 160px",
+                gap: 8,
+                fontWeight: "bold",
+                marginBottom: 8,
+              }}
+            >
+              <div>Ingredient</div>
+              <div>Search</div>
+              <div>Matched Item</div>
+              <div>Status</div>
+            </div>
+
+            {(ocrSections?.ingredients || []).map((ingredient, index) => {
+              const suggestions = itemSuggestions[index] || [];
+
+              return (
+                <div
+                  key={index}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 120px 260px 160px",
+                    gap: 8,
+                    marginBottom: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <div>{ingredient.ingredient_text || ""}</div>
+
+                  <button
+                    onClick={() =>
+                      searchItemsForIngredient(index, ingredient.ingredient_text || "")
+                    }
+                  >
+                    Search
+                  </button>
+
+                  <select
+                    value={ingredientMatches[index] || ""}
+                    onChange={(e) =>
+                      setIngredientMatches((prev) => ({
+                        ...prev,
+                        [index]: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Select item</option>
+
+                    {suggestions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name || item.slug || item.id}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div>
+                    {suggestions.length === 0 ? (
+                      <span style={{ color: "red" }}>No match</span>
+                    ) : ingredientMatches[index] ? (
+                      <span style={{ color: "green" }}>Selected</span>
+                    ) : (
+                      <span>Review</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            <button onClick={saveRecipeItemsPhase1}>
+              Save Recipe Items
+            </button>
+          </div>
+        )}
+
 
       <div style={{ marginBottom: 10 }}>
         Current Label: <b>{currentLabel}</b>
