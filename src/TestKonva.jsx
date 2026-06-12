@@ -559,6 +559,62 @@ export default function TestKonva() {
       }
     };
 
+
+    const createHouseItemForIngredient = async (index, ingredientText) => {
+      const name = (ingredientText || "").trim();
+
+      if (!name) {
+        alert("Ingredient name is empty.");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("access_token_admin");
+        const houseId = localStorage.getItem("house_id_under_test");
+
+        const response = await fetch("http://localhost:5000/api/items", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name,
+            house_id: houseId,
+            base_measure_id: "MEAS_EA",
+            is_food: true,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Create house item failed:", result);
+          alert(result.message || "Create house item failed.");
+          return;
+        }
+
+        const newItem = result.item || result.data || result;
+
+        setItemSuggestions((prev) => ({
+          ...prev,
+          [index]: [newItem, ...(prev[index] || [])],
+        }));
+
+        setIngredientMatches((prev) => ({
+          ...prev,
+          [index]: newItem.id,
+        }));
+
+        alert(`Created house item: ${newItem.name}`);
+      } catch (err) {
+        console.error("Create house item error:", err);
+        alert("Create house item failed.");
+      }
+    };
+
+
+
     const saveRecipeItemsPhase1 = async () => {
       if (!createdRecipeId) {
         alert("No recipe id found.");
@@ -1098,7 +1154,16 @@ export default function TestKonva() {
 
                   <div>
                     {suggestions.length === 0 ? (
-                      <span style={{ color: "red" }}>No match</span>
+                      <button
+                        onClick={() =>
+                          createHouseItemForIngredient(
+                            index,
+                            ingredient.ingredient_text || ""
+                          )
+                        }
+                      >
+                        Create House Item
+                      </button>
                     ) : ingredientMatches[index] ? (
                       <span style={{ color: "green" }}>Selected</span>
                     ) : (
