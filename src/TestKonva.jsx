@@ -27,6 +27,7 @@ export default function TestKonva() {
   const [ingredientMatches, setIngredientMatches] = useState({});
   const [itemSuggestions, setItemSuggestions] = useState({});
   const [showIngredientMatching, setShowIngredientMatching] = useState(false);
+  const [measureLookup, setMeasureLookup] = useState({});
 
   const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
   const scale = image ? Math.min(1, maxViewportWidth / image.width) : 1;
@@ -635,14 +636,18 @@ export default function TestKonva() {
 
           const ingredient = ingredients[i];
 
-          const payload = {
-            recipe_id: createdRecipeId,
-            item_id: selectedItemId,
-            quantity: 1,
-            measure_id: "MEAS_EA",
-            sort_order: (i + 1) * 10,
-            instruction: ingredient.ingredient_text || "",
-          };
+            const lookup = await loadMeasures();
+
+            const measureText = (ingredient.measure_text || "").toLowerCase().trim();
+
+            const payload = {
+              recipe_id: createdRecipeId,
+              item_id: selectedItemId,
+              quantity: parseQuantity(ingredient.amount_text),
+              measure_id: lookup[measureText] || "MEAS_EA",
+              sort_order: (i + 1) * 10,
+              instruction: ingredient.ingredient_text || "",
+            };
 
           const response = await fetch("http://localhost:5000/api/recipe-items", {
             method: "POST",
@@ -709,92 +714,109 @@ export default function TestKonva() {
       }
     };
 
-//     const searchItemsForIngredient = async (index, ingredientText) => {
-//       if (!ingredientText) return;
-//
-//       try {
-//         const token = localStorage.getItem("access_token_admin");
-//
-//         const response = await fetch(
-//           `http://localhost:5000/api/items?search=${encodeURIComponent(ingredientText)}&limit=10`,
-//           {
-//             headers: {
-//               Authorization: `Bearer ${token}`,
-//             },
-//           }
-//         );
-//
-//         const result = await response.json();
-//
-//         if (!response.ok) {
-//           console.log("Item search failed:", result);
-//           alert(result.message || "Item search failed.");
-//           return;
-//         }
-//
-//         setItemSuggestions((prev) => ({
-//           ...prev,
-//           [index]: result.items || [],
-//         }));
-//       } catch (err) {
-//         console.error("Item search error:", err);
-//         alert("Item search failed.");
-//       }
-//     };
-//
-//     const saveRecipeItemsPhase1 = async () => {
-//       if (!createdRecipeId) {
-//         alert("No recipe id found.");
-//         return;
-//       }
-//
-//       try {
-//         const token = localStorage.getItem("access_token_admin");
-//
-//         const ingredients = ocrSections?.ingredients || [];
-//
-//         for (let i = 0; i < ingredients.length; i += 1) {
-//           const selectedItemId = ingredientMatches[i];
-//
-//           if (!selectedItemId) {
-//             continue;
-//           }
-//
-//           const ingredient = ingredients[i];
-//
-//           const payload = {
-//             recipe_id: createdRecipeId,
-//             item_id: selectedItemId,
-//             quantity: 1,
-//             measure_id: "MEAS_EA",
-//             sort_order: (i + 1) * 10,
-//             instruction: ingredient.ingredient_text || "",
-//           };
-//
-//           const response = await fetch("http://localhost:5000/api/recipe-items", {
-//             method: "POST",
-//             headers: {
-//               "Content-Type": "application/json",
-//               Authorization: `Bearer ${token}`,
-//             },
-//             body: JSON.stringify(payload),
-//           });
-//
-//           const result = await response.json();
-//
-//           if (!response.ok) {
-//             console.log("Create recipe item failed:", result);
-//             alert(result.message || "Create recipe item failed.");
-//             return;
-//           }
-//         }
-//
-//         alert("Recipe items saved.");
-//       } catch (err) {
-//         console.error("Save recipe items error:", err);
-//         alert("Save recipe items failed.");
-//       }
-//     };
+    const loadMeasures = async () => {
+      try {
+        const token = localStorage.getItem("access_token_admin");
+
+        const response = await fetch(
+          "http://localhost:5000/api/measure?per_page=500",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Load measures failed:", result);
+          alert(result.message || "Load measures failed.");
+          return {};
+        }
+
+        const preferredCountryCode = "AU";
+
+        const chooseBetterMeasure = (current, candidate) => {
+          if (!current) return candidate;
+
+          if (
+            candidate.country_code === preferredCountryCode &&
+            current.country_code !== preferredCountryCode
+          ) {
+            return candidate;
+          }
+
+          return current;
+        };
+
+        const addAlias = (lookupObjects, alias, measure) => {
+          if (!alias || !measure) return;
+
+          const key = alias.toLowerCase();
+          lookupObjects[key] = chooseBetterMeasure(
+            lookupObjects[key],
+            measure
+          );
+        };
+
+        const lookupObjects = {};
+
+        (result.items || []).forEach((m) => {
+          addAlias(lookupObjects, m.code, m);
+          addAlias(lookupObjects, m.name, m);
+          addAlias(lookupObjects, m.symbol, m);
+        });
+
+        addAlias(lookupObjects, "teaspoon", lookupObjects["tsp"]);
+        addAlias(lookupObjects, "teaspoons", lookupObjects["tsp"]);
+
+        addAlias(lookupObjects, "tablespoon", lookupObjects["tbsp"]);
+        addAlias(lookupObjects, "tablespoons", lookupObjects["tbsp"]);
+
+        addAlias(lookupObjects, "cups", lookupObjects["cup"]);
+        addAlias(lookupObjects, "cloves", lookupObjects["clove"]);
+        addAlias(lookupObjects, "sprigs", lookupObjects["sprig"]);
+        addAlias(lookupObjects, "bunches", lookupObjects["bunch"]);
+        addAlias(lookupObjects, "slices", lookupObjects["slice"]);
+        addAlias(lookupObjects, "cans", lookupObjects["can"]);
+
+        const lookup = {};
+
+        Object.entries(lookupObjects).forEach(([key, measure]) => {
+          lookup[key] = measure.id;
+        });
+
+        setMeasureLookup(lookup);
+        return lookup;
+      } catch (err) {
+        console.error("Load measures error:", err);
+        alert("Load measures failed.");
+        return {};
+      }
+    };
+
+    const parseQuantity = (text) => {
+      const value = (text || "").trim();
+
+      if (!value) return 1;
+
+      // simple fraction: 1/2
+      if (/^\d+\/\d+$/.test(value)) {
+        const [a, b] = value.split("/").map(Number);
+        return b ? a / b : 1;
+      }
+
+      // mixed number: 1 1/2
+      if (/^\d+\s+\d+\/\d+$/.test(value)) {
+        const [whole, frac] = value.split(/\s+/);
+        const [a, b] = frac.split("/").map(Number);
+        return Number(whole) + (b ? a / b : 0);
+      }
+
+      const n = Number(value);
+      return Number.isFinite(n) && n > 0 ? n : 1;
+    };
 
 
   return (
