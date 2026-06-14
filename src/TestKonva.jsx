@@ -369,7 +369,7 @@ export default function TestKonva() {
 
       setOcrResult(result);
       setOcrSections(result.sections || null);
-
+      console.log("OCR ingredients", result.sections?.ingredients);
       console.log("OCR completed:", result);
     } catch (err) {
       console.error("OCR error:", err);
@@ -646,7 +646,7 @@ export default function TestKonva() {
               quantity: parseQuantity(ingredient.amount_text),
               measure_id: lookup[measureText] || "MEAS_EA",
               sort_order: (i + 1) * 10,
-              instruction: ingredient.ingredient_text || "",
+              instruction: ingredient.preparation_text || "",
             };
 
           const response = await fetch("http://localhost:5000/api/recipe-items", {
@@ -989,12 +989,22 @@ export default function TestKonva() {
 
           <h3>Ingredients</h3>
 
-          <div style={{ display: "grid", gridTemplateColumns: "80px 90px 80px 90px 1fr", gap: 8, fontWeight: "bold", marginBottom: 6 }}>
+          <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "70px 80px 70px 80px 320px 220px",
+                    minWidth: 860,
+                    alignItems: "center",
+                    gap: 8,
+                    fontWeight: "bold",
+                    marginBottom: 6,
+               }}
+             >
             <div>Amount</div>
             <div>Unit</div>
             <div>Alt Amt</div>
             <div>Alt Unit</div>
             <div>Ingredient</div>
+            <div>Preparation</div>
           </div>
 
           {(ocrSections.ingredients || []).map((item, index) => (
@@ -1002,7 +1012,9 @@ export default function TestKonva() {
               key={index}
               style={{
                 display: "grid",
-                gridTemplateColumns: "80px 90px 80px 90px 1fr",
+                gridTemplateColumns: "70px 80px 70px 80px 320px 220px",
+                minWidth: 860,
+                alignItems: "center",
                 gap: 8,
                 marginBottom: 8,
               }}
@@ -1066,6 +1078,20 @@ export default function TestKonva() {
                   setOcrSections({ ...ocrSections, ingredients });
                 }}
               />
+
+                <input
+                  value={item.preparation_text || ""}
+                  onChange={(e) => {
+                    const ingredients = [...(ocrSections.ingredients || [])];
+                    ingredients[index] = {
+                      ...ingredients[index],
+                      preparation_text: e.target.value,
+                    };
+                    setOcrSections({ ...ocrSections, ingredients });
+                  }}
+                />
+
+
             </div>
           ))}
 
@@ -1121,10 +1147,11 @@ export default function TestKonva() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 120px 260px 160px",
+                gridTemplateColumns: "70px 80px 70px 80px 320px 220px",
                 gap: 8,
                 fontWeight: "bold",
-                marginBottom: 8,
+                marginBottom: 6,
+                minWidth: 860,
               }}
             >
               <div>Ingredient</div>
@@ -1139,13 +1166,13 @@ export default function TestKonva() {
               return (
                 <div
                   key={index}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 120px 260px 160px",
-                    gap: 8,
-                    marginBottom: 8,
-                    alignItems: "center",
-                  }}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 120px 260px 160px",
+                      gap: 8,
+                      marginBottom: 8,
+                      alignItems: "center",
+                    }}
                 >
                   <div>{ingredient.ingredient_text || ""}</div>
 
