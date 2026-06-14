@@ -989,6 +989,28 @@ export default function TestKonva() {
 
           <h3>Ingredients</h3>
 
+            <button
+              type="button"
+              onClick={() => {
+                const ingredients = [...(ocrSections.ingredients || [])];
+
+                ingredients.push({
+                  raw_text: "",
+                  amount_text: "",
+                  measure_text: "",
+                  alt_amount_text: "",
+                  alt_measure_text: "",
+                  ingredient_text: "",
+                  preparation_text: "",
+                });
+
+                setOcrSections({ ...ocrSections, ingredients });
+              }}
+              style={{ marginBottom: 8 }}
+            >
+              Add Ingredient Row
+            </button>
+
           <div style={{
                     display: "grid",
                     gridTemplateColumns: "70px 80px 70px 80px 320px 220px",
