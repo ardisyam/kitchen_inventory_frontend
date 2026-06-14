@@ -866,6 +866,7 @@ export default function TestKonva() {
         <button onClick={() => setCurrentLabel("serves")}>Serves</button>
         <button onClick={() => setCurrentLabel("ingredients")}>Ingredients</button>
         <button onClick={() => setCurrentLabel("instructions")}>Instructions</button>
+        <button onClick={() => setCurrentLabel("instruction_column")}>Instruction Column</button>
         <button onClick={handleUndo}>Undo</button>
         <button onClick={handleSave} disabled={!recipeScanId}>Save</button>
         <button onClick={handleRunOcr} disabled={!recipeScanId}>Run OCR</button>
