@@ -560,9 +560,18 @@ export default function TestKonva() {
       }
     };
 
+    const toItemDisplayName = (text) => {
+      return (text || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    };
+
+
 
     const createHouseItemForIngredient = async (index, ingredientText) => {
-      const name = (ingredientText || "").trim();
+        const name = toItemDisplayName(ingredientText);
 
       if (!name) {
         alert("Ingredient name is empty.");
