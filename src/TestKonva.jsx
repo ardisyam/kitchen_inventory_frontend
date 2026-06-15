@@ -28,6 +28,7 @@ export default function TestKonva() {
   const [itemSuggestions, setItemSuggestions] = useState({});
   const [showIngredientMatching, setShowIngredientMatching] = useState(false);
   const [measureLookup, setMeasureLookup] = useState({});
+  const [categoryCandidates, setCategoryCandidates] = useState({});
 
   const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
   const scale = image ? Math.min(1, maxViewportWidth / image.width) : 1;
@@ -571,7 +572,7 @@ export default function TestKonva() {
 
 
     const createHouseItemForIngredient = async (index, ingredientText) => {
-        const name = toItemDisplayName(ingredientText);
+      const name = toItemDisplayName(ingredientText);
 
       if (!name) {
         alert("Ingredient name is empty.");
@@ -605,6 +606,11 @@ export default function TestKonva() {
         }
 
         const newItem = result.item || result.data || result;
+
+        setCategoryCandidates((prev) => ({
+          ...prev,
+          [index]: newItem.category_candidates || [],
+        }));
 
         setItemSuggestions((prev) => ({
           ...prev,
@@ -825,6 +831,37 @@ export default function TestKonva() {
 
       const n = Number(value);
       return Number.isFinite(n) && n > 0 ? n : 1;
+    };
+
+
+    const updateItemCategory = async (itemId, categoryId) => {
+      try {
+        const token = localStorage.getItem("access_token_admin");
+
+        const response = await fetch(`http://localhost:5000/api/items/${itemId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            category_id: categoryId || null,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Update item category failed:", result);
+          alert(result.message || "Update item category failed.");
+          return;
+        }
+
+        console.log("Updated item category:", result);
+      } catch (err) {
+        console.error("Update item category error:", err);
+        alert("Update item category failed.");
+      }
     };
 
 
@@ -1233,24 +1270,63 @@ export default function TestKonva() {
                     ))}
                   </select>
 
-                  <div>
-                    {suggestions.length === 0 ? (
-                      <button
-                        onClick={() =>
-                          createHouseItemForIngredient(
-                            index,
-                            ingredient.ingredient_text || ""
-                          )
-                        }
-                      >
-                        Create House Item
-                      </button>
-                    ) : ingredientMatches[index] ? (
-                      <span style={{ color: "green" }}>Selected</span>
-                    ) : (
-                      <span>Review</span>
-                    )}
-                  </div>
+                    <div>
+                      {suggestions.length === 0 ? (
+                        <button
+                          onClick={() =>
+                            createHouseItemForIngredient(
+                              index,
+                              ingredient.ingredient_text || ""
+                            )
+                          }
+                        >
+                          Create House Item
+                        </button>
+                      ) : ingredientMatches[index] ? (
+                        <span style={{ color: "green" }}>Selected</span>
+                      ) : (
+                        <span>Review</span>
+                      )}
+
+                        {(categoryCandidates[index] || []).length > 0 && (
+                          <div style={{ marginTop: 6, fontSize: 12 }}>
+                            <b>Category:</b>
+
+                            <select
+                              value={suggestions[0]?.category_id || ""}
+
+                                onChange={async (e) => {
+                                  const categoryId = e.target.value;
+                                  const updatedSuggestions = [...suggestions];
+
+                                  if (updatedSuggestions[0]) {
+                                    updatedSuggestions[0] = {
+                                      ...updatedSuggestions[0],
+                                      category_id: categoryId,
+                                    };
+
+                                    await updateItemCategory(updatedSuggestions[0].id, categoryId);
+                                  }
+
+                                  setItemSuggestions((prev) => ({
+                                    ...prev,
+                                    [index]: updatedSuggestions,
+                                  }));
+                                }}
+
+                              style={{ display: "block", width: "100%", marginTop: 4 }}
+                            >
+                              <option value="">Select category</option>
+
+                              {(categoryCandidates[index] || []).map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                  {cat.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                    </div>
                 </div>
               );
             })}
