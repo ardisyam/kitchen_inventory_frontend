@@ -1,5 +1,6 @@
 ﻿import React, { useState } from "react";
 import { apiFetch } from "./apiFetch";
+import { API_BASE_URL } from "./config";
 import {
   Stage,
   Layer,
@@ -97,9 +98,7 @@ export default function TestKonva() {
       return;
     }
     try {
-      const response = await apiFetch(
-        `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions?limit=100`
-      );
+      const response = await apiFetch(`${API_BASE_URL}/api/recipe-scans/${recipeScanId}/regions?limit=100`);
       const result = await response.json();
 
       if (!response.ok) {
@@ -140,7 +139,7 @@ export default function TestKonva() {
       setRectangles(loadedRects);
 
         const scanResponse = await apiFetch(
-          `http://localhost:5000/api/recipe-scans/${recipeScanId}`
+          `${API_BASE_URL}/api/recipe-scans/${recipeScanId}`
         );
 
         const scanResult = await scanResponse.json();
@@ -276,7 +275,7 @@ export default function TestKonva() {
       };
 
       const response = await apiFetch(
-        `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions/bulk`,
+        `${API_BASE_URL}/api/recipe-scans/${recipeScanId}/regions/bulk`,
         {
           method: "PUT",
           headers: {
@@ -305,12 +304,9 @@ export default function TestKonva() {
       formData.append("image", file);
 
       const response = await apiFetch(
-        `http://localhost:5000/api/recipe-scans/${scanId}/image`,
+        `${API_BASE_URL}/api/recipe-scans/${scanId}/image`,
         {
           method: "POST",
-          headers: {
-             "Content-Type": "application/json",
-          },
           body: formData,
         }
       );
@@ -335,7 +331,7 @@ export default function TestKonva() {
 
     try {
       const response = await apiFetch(
-        `http://localhost:5000/api/recipe-scans/${recipeScanId}/ocr`,
+        `${API_BASE_URL}/api/recipe-scans/${recipeScanId}/ocr`,
         {
           method: "POST",
           headers: {
@@ -370,7 +366,7 @@ export default function TestKonva() {
 
       try {
         const response = await apiFetch(
-          `http://localhost:5000/api/recipe-scans/${recipeScanId}/parsed-json`,
+          `${API_BASE_URL}/api/recipe-scans/${recipeScanId}/parsed-json`,
           {
             method: "PUT",
             headers: {
@@ -397,7 +393,7 @@ export default function TestKonva() {
 
     const loadRecentScans = async () => {
       try {
-       const response = await apiFetch("http://localhost:5000/api/recipe-scans?limit=20");
+       const response = await apiFetch(`${API_BASE_URL}/api/recipe-scans?limit=20`);
 
         const result = await response.json();
 
@@ -421,7 +417,7 @@ export default function TestKonva() {
       }
 
       try {
-        const response = await apiFetch("http://localhost:5000/api/recipe-scans", {
+        const response = await apiFetch(`${API_BASE_URL}/api/recipe-scans`, {
           method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -485,7 +481,7 @@ export default function TestKonva() {
 
       try {
         const response = await apiFetch(
-          `http://localhost:5000/api/items?search=${encodeURIComponent(text)}&limit=10`
+          `${API_BASE_URL}/api/items?search=${encodeURIComponent(text)}&limit=10`
         );
 
         const result = await response.json();
@@ -544,7 +540,7 @@ export default function TestKonva() {
       try {
         const houseId = localStorage.getItem("house_id_under_test");
 
-        const response = await apiFetch("http://localhost:5000/api/items", {
+        const response = await apiFetch(`${API_BASE_URL}/api/items`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -622,7 +618,7 @@ export default function TestKonva() {
               instruction: ingredient.preparation_text || "",
             };
 
-          const response = await apiFetch("http://localhost:5000/api/recipe-items", {
+          const response = await apiFetch(`${API_BASE_URL}/api/recipe-items`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -655,7 +651,7 @@ export default function TestKonva() {
 
       try {
         const response = await apiFetch(
-          `http://localhost:5000/api/recipe-scans/${recipeScanId}/convert-to-recipe`,
+          `${API_BASE_URL}/api/recipe-scans/${recipeScanId}/convert-to-recipe`,
           {
             method: "POST",
             headers: {
@@ -686,7 +682,7 @@ export default function TestKonva() {
     const loadMeasures = async () => {
       try {
         const response = await apiFetch(
-          "http://localhost:5000/api/measure?per_page=500"
+          `${API_BASE_URL}/api/measure?per_page=500`
         );
 
         const result = await response.json();
@@ -790,7 +786,7 @@ export default function TestKonva() {
 
       try {
         const response = await apiFetch(
-          `http://localhost:5000/api/category?search=${encodeURIComponent(q)}&limit=10`
+          `${API_BASE_URL}/api/category?search=${encodeURIComponent(q)}&limit=10`
         );
 
         const result = await response.json();
@@ -816,7 +812,7 @@ export default function TestKonva() {
 
     const updateItemCategory = async (itemId, categoryId) => {
       try {
-        const response = await apiFetch(`http://localhost:5000/api/items/${itemId}`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/items/${itemId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -910,44 +906,58 @@ export default function TestKonva() {
           >
             <h3>Recent Scans</h3>
 
-            {recentScans.map((scan) => (
-              <div
-                key={scan.id}
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  alignItems: "center",
-                  marginBottom: 8,
-                }}
-              >
+            {recentScans.map((scan) => {
+              const imageName =
+                scan.source_image_name === `${scan.id}.jpg`
+                  ? null
+                  : scan.source_image_name;
+
+              return (
                 <button
+                  key={scan.id}
+                  type="button"
                   onClick={() => {
                     setRecipeScanId(scan.id);
                     console.log("Selected existing scan:", scan.id);
                   }}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: 10,
+                    marginBottom: 8,
+                    border: "1px solid #ccc",
+                    borderRadius: 8,
+                    background: "white",
+                    cursor: "pointer",
+                  }}
                 >
-                  Select
-                </button>
-
-                <div>
-                  <div>
-                    <b>{scan.source_image_name || "(no image name)"}</b>
-                  </div>
+                  {imageName && (
+                    <div>
+                      <b>{imageName}</b>
+                    </div>
+                  )}
 
                   <div style={{ fontSize: 12 }}>
-                    {scan.status}
+                    <b>{scan.status}</b>
                     {" | "}
-                    {(scan.updated_at || scan.created_at || "")
-                      .replace("T", " ")
-                      .replace("Z", "")}
+                    {new Date(
+                      scan.updated_at || scan.created_at
+                    ).toLocaleString("en-AU", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </div>
 
                   <div style={{ fontSize: 12, color: "#666" }}>
                     {scan.id}
                   </div>
-                </div>
-              </div>
-            ))}
+                </button>
+              );
+            })}
           </div>
         )}
 
