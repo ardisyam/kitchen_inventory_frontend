@@ -29,11 +29,19 @@ export default function TestKonva() {
   const [showIngredientMatching, setShowIngredientMatching] = useState(false);
   const [measureLookup, setMeasureLookup] = useState({});
   const [categoryCandidates, setCategoryCandidates] = useState({});
+  const [categorySearchText, setCategorySearchText] = useState({});
 
   const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
   const scale = image ? Math.min(1, maxViewportWidth / image.width) : 1;
   const stageWidth = image ? image.width * scale : 1200;
   const stageHeight = image ? image.height * scale : 1800;
+
+    const handleAuthExpired = () => {
+      localStorage.removeItem("access_token_admin");
+      localStorage.removeItem("account_id");
+      alert("Session expired. Please login again.");
+      window.location.reload();
+    };
 
   const toImagePos = (stage) => {
     const p = stage.getPointerPosition();
@@ -426,6 +434,11 @@ export default function TestKonva() {
             },
           }
         );
+
+        if (response.status === 401) {
+          handleAuthExpired();
+          return;
+        }
 
         const result = await response.json();
 
@@ -833,6 +846,46 @@ export default function TestKonva() {
       return Number.isFinite(n) && n > 0 ? n : 1;
     };
 
+    const searchCategoriesForIngredient = async (index, text) => {
+      const q = (text || "").trim();
+
+      if (!q) {
+        alert("Please type a category search term.");
+        return;
+      }
+
+      try {
+        const token = localStorage.getItem("access_token_admin");
+
+        const response = await fetch(
+          `http://localhost:5000/api/category?search=${encodeURIComponent(q)}&limit=10`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Category search failed:", result);
+          alert(result.message || "Category search failed.");
+          return;
+        }
+
+        setCategoryCandidates((prev) => ({
+          ...prev,
+          [index]: result.items || [],
+        }));
+      } catch (err) {
+        console.error("Category search error:", err);
+        alert("Category search failed.");
+      }
+    };
+
+
+
 
     const updateItemCategory = async (itemId, categoryId) => {
       try {
@@ -1215,17 +1268,15 @@ export default function TestKonva() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "70px 80px 70px 80px 320px 220px",
+                gridTemplateColumns: "1fr 260px 260px",
                 gap: 8,
                 fontWeight: "bold",
                 marginBottom: 6,
-                minWidth: 860,
               }}
             >
               <div>Ingredient</div>
-              <div>Search</div>
               <div>Matched Item</div>
-              <div>Status</div>
+              <div>Category</div>
             </div>
 
             {(ocrSections?.ingredients || []).map((ingredient, index) => {
@@ -1234,45 +1285,40 @@ export default function TestKonva() {
               return (
                 <div
                   key={index}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 120px 260px 160px",
-                      gap: 8,
-                      marginBottom: 8,
-                      alignItems: "center",
-                    }}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 260px 260px",
+                    gap: 8,
+                    marginBottom: 8,
+                    alignItems: "start",
+                  }}
                 >
                   <div>{ingredient.ingredient_text || ""}</div>
 
-                  <button
-                    onClick={() =>
-                      searchItemsForIngredient(index, ingredient.ingredient_text || "")
-                    }
-                  >
-                    Search
-                  </button>
+                  <div>
+                    <select
+                      value={ingredientMatches[index] || ""}
+                      onChange={(e) =>
+                        setIngredientMatches((prev) => ({
+                          ...prev,
+                          [index]: e.target.value,
+                        }))
+                      }
+                      style={{ width: "100%" }}
+                    >
+                      <option value="">No matching item — create new item</option>
 
-                  <select
-                    value={ingredientMatches[index] || ""}
-                    onChange={(e) =>
-                      setIngredientMatches((prev) => ({
-                        ...prev,
-                        [index]: e.target.value,
-                      }))
-                    }
-                  >
-                    <option value="">Select item</option>
+                      {suggestions.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name || item.slug || item.id}
+                        </option>
+                      ))}
+                    </select>
 
-                    {suggestions.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name || item.slug || item.id}
-                      </option>
-                    ))}
-                  </select>
-
-                    <div>
-                      {suggestions.length === 0 ? (
+                    {!ingredientMatches[index] ? (
+                      <div style={{ marginTop: 6 }}>
                         <button
+                          type="button"
                           onClick={() =>
                             createHouseItemForIngredient(
                               index,
@@ -1280,53 +1326,85 @@ export default function TestKonva() {
                             )
                           }
                         >
-                          Create House Item
+                          Create New Item
                         </button>
-                      ) : ingredientMatches[index] ? (
-                        <span style={{ color: "green" }}>Selected</span>
-                      ) : (
-                        <span>Review</span>
-                      )}
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: 6, color: "green" }}>
+                        Selected
+                      </div>
+                    )}
+                  </div>
 
-                        {(categoryCandidates[index] || []).length > 0 && (
-                          <div style={{ marginTop: 6, fontSize: 12 }}>
-                            <b>Category:</b>
+                    <div>
+                      {suggestions.length > 0 && (
+                        <>
+                          <select
+                            value={suggestions[0]?.category_id || ""}
+                            
+                          onChange={async (e) => {
+                            const categoryId = e.target.value;
+                            const updatedSuggestions = [...suggestions];
 
-                            <select
-                              value={suggestions[0]?.category_id || ""}
+                            if (updatedSuggestions[0]) {
+                              updatedSuggestions[0] = {
+                                ...updatedSuggestions[0],
+                                category_id: categoryId,
+                              };
 
-                                onChange={async (e) => {
-                                  const categoryId = e.target.value;
-                                  const updatedSuggestions = [...suggestions];
+                              await updateItemCategory(
+                                updatedSuggestions[0].id,
+                                categoryId
+                              );
+                            }
 
-                                  if (updatedSuggestions[0]) {
-                                    updatedSuggestions[0] = {
-                                      ...updatedSuggestions[0],
-                                      category_id: categoryId,
-                                    };
+                            setItemSuggestions((prev) => ({
+                              ...prev,
+                              [index]: updatedSuggestions,
+                            }));
+                          }}
+                          style={{ display: "block", width: "100%", marginTop: 4 }}
+                        >
+                          <option value="">Select category</option>
 
-                                    await updateItemCategory(updatedSuggestions[0].id, categoryId);
-                                  }
+                          {(categoryCandidates[index] || []).map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
 
-                                  setItemSuggestions((prev) => ({
-                                    ...prev,
-                                    [index]: updatedSuggestions,
-                                  }));
-                                }}
+                        <input
+                          placeholder="Search category..."
+                          value={categorySearchText[index] || ""}
+                          onChange={(e) =>
+                            setCategorySearchText((prev) => ({
+                              ...prev,
+                              [index]: e.target.value,
+                            }))
+                          }
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            marginTop: 6,
+                          }}
+                        />
 
-                              style={{ display: "block", width: "100%", marginTop: 4 }}
-                            >
-                              <option value="">Select category</option>
-
-                              {(categoryCandidates[index] || []).map((cat) => (
-                                <option key={cat.id} value={cat.id}>
-                                  {cat.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                    </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            searchCategoriesForIngredient(
+                              index,
+                              categorySearchText[index] || ""
+                            )
+                          }
+                          style={{ marginTop: 4 }}
+                        >
+                          Search Category
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             })}
