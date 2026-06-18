@@ -1,6 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
-export default function Login() {
+export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -28,9 +28,12 @@ export default function Login() {
       localStorage.setItem("access_token_admin", result.access_token);
       localStorage.setItem("account_id", result.account_id);
 
-      window.location.reload();
-
       setMessage("Login successful");
+
+      if (onLogin) {
+        onLogin();
+      }
+      
     } catch (err) {
       console.error(err);
       setMessage("Login failed");

@@ -1,4 +1,5 @@
 ﻿import React, { useState } from "react";
+import { apiFetch } from "./apiFetch";
 import {
   Stage,
   Layer,
@@ -36,12 +37,6 @@ export default function TestKonva() {
   const stageWidth = image ? image.width * scale : 1200;
   const stageHeight = image ? image.height * scale : 1800;
 
-    const handleAuthExpired = () => {
-      localStorage.removeItem("access_token_admin");
-      localStorage.removeItem("account_id");
-      alert("Session expired. Please login again.");
-      window.location.reload();
-    };
 
   const toImagePos = (stage) => {
     const p = stage.getPointerPosition();
@@ -102,15 +97,8 @@ export default function TestKonva() {
       return;
     }
     try {
-      const token = localStorage.getItem("access_token_admin");
-
-      const response = await fetch(
-        `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions?limit=100`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const response = await apiFetch(
+        `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions?limit=100`
       );
       const result = await response.json();
 
@@ -151,13 +139,8 @@ export default function TestKonva() {
 
       setRectangles(loadedRects);
 
-        const scanResponse = await fetch(
-          `http://localhost:5000/api/recipe-scans/${recipeScanId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const scanResponse = await apiFetch(
+          `http://localhost:5000/api/recipe-scans/${recipeScanId}`
         );
 
         const scanResult = await scanResponse.json();
@@ -292,15 +275,12 @@ export default function TestKonva() {
         })),
       };
 
-      const token = localStorage.getItem("access_token_admin");
-
-      const response = await fetch(
+      const response = await apiFetch(
         `http://localhost:5000/api/recipe-scans/${recipeScanId}/regions/bulk`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
         }
@@ -321,17 +301,15 @@ export default function TestKonva() {
   };
 
     const uploadRecipeScanImage = async (scanId, file) => {
-      const token = localStorage.getItem("access_token_admin");
-
       const formData = new FormData();
       formData.append("image", file);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `http://localhost:5000/api/recipe-scans/${scanId}/image`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+             "Content-Type": "application/json",
           },
           body: formData,
         }
@@ -356,14 +334,12 @@ export default function TestKonva() {
     }
 
     try {
-      const token = localStorage.getItem("access_token_admin");
-
-      const response = await fetch(
+      const response = await apiFetch(
         `http://localhost:5000/api/recipe-scans/${recipeScanId}/ocr`,
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+             "Content-Type": "application/json",
           },
         }
       );
@@ -393,15 +369,12 @@ export default function TestKonva() {
       }
 
       try {
-        const token = localStorage.getItem("access_token_admin");
-
-        const response = await fetch(
+        const response = await apiFetch(
           `http://localhost:5000/api/recipe-scans/${recipeScanId}/parsed-json`,
           {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(ocrSections),
           }
@@ -424,21 +397,7 @@ export default function TestKonva() {
 
     const loadRecentScans = async () => {
       try {
-        const token = localStorage.getItem("access_token_admin");
-
-        const response = await fetch(
-          "http://localhost:5000/api/recipe-scans?limit=20",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.status === 401) {
-          handleAuthExpired();
-          return;
-        }
+       const response = await apiFetch("http://localhost:5000/api/recipe-scans?limit=20");
 
         const result = await response.json();
 
@@ -462,13 +421,10 @@ export default function TestKonva() {
       }
 
       try {
-        const token = localStorage.getItem("access_token_admin");
-
-        const response = await fetch("http://localhost:5000/api/recipe-scans", {
+        const response = await apiFetch("http://localhost:5000/api/recipe-scans", {
           method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
               house_id: localStorage.getItem("house_id_under_test"),
@@ -528,15 +484,8 @@ export default function TestKonva() {
       }
 
       try {
-        const token = localStorage.getItem("access_token_admin");
-
-        const response = await fetch(
-          `http://localhost:5000/api/items?search=${encodeURIComponent(text)}&limit=10`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const response = await apiFetch(
+          `http://localhost:5000/api/items?search=${encodeURIComponent(text)}&limit=10`
         );
 
         const result = await response.json();
@@ -593,14 +542,12 @@ export default function TestKonva() {
       }
 
       try {
-        const token = localStorage.getItem("access_token_admin");
         const houseId = localStorage.getItem("house_id_under_test");
 
-        const response = await fetch("http://localhost:5000/api/items", {
+        const response = await apiFetch("http://localhost:5000/api/items", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             name,
@@ -653,8 +600,6 @@ export default function TestKonva() {
       const ingredients = ocrSections?.ingredients || [];
 
       try {
-        const token = localStorage.getItem("access_token_admin");
-
         for (let i = 0; i < ingredients.length; i += 1) {
           const selectedItemId = ingredientMatches[i];
 
@@ -677,11 +622,10 @@ export default function TestKonva() {
               instruction: ingredient.preparation_text || "",
             };
 
-          const response = await fetch("http://localhost:5000/api/recipe-items", {
+          const response = await apiFetch("http://localhost:5000/api/recipe-items", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(payload),
           });
@@ -710,14 +654,11 @@ export default function TestKonva() {
       }
 
       try {
-        const token = localStorage.getItem("access_token_admin");
-
-        const response = await fetch(
+        const response = await apiFetch(
           `http://localhost:5000/api/recipe-scans/${recipeScanId}/convert-to-recipe`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${token}`,
             },
           }
         );
@@ -744,15 +685,8 @@ export default function TestKonva() {
 
     const loadMeasures = async () => {
       try {
-        const token = localStorage.getItem("access_token_admin");
-
-        const response = await fetch(
-          "http://localhost:5000/api/measure?per_page=500",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const response = await apiFetch(
+          "http://localhost:5000/api/measure?per_page=500"
         );
 
         const result = await response.json();
@@ -855,15 +789,8 @@ export default function TestKonva() {
       }
 
       try {
-        const token = localStorage.getItem("access_token_admin");
-
-        const response = await fetch(
-          `http://localhost:5000/api/category?search=${encodeURIComponent(q)}&limit=10`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const response = await apiFetch(
+          `http://localhost:5000/api/category?search=${encodeURIComponent(q)}&limit=10`
         );
 
         const result = await response.json();
@@ -889,13 +816,10 @@ export default function TestKonva() {
 
     const updateItemCategory = async (itemId, categoryId) => {
       try {
-        const token = localStorage.getItem("access_token_admin");
-
-        const response = await fetch(`http://localhost:5000/api/items/${itemId}`, {
+        const response = await apiFetch(`http://localhost:5000/api/items/${itemId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             category_id: categoryId || null,
