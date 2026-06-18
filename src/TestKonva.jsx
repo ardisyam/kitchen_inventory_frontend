@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   Stage,
   Layer,
@@ -1005,13 +1005,23 @@ export default function TestKonva() {
                   Select
                 </button>
 
-                <span>
-                  <b>{scan.source_image_name || "(no image name)"}</b>
-                  {" — "}
-                  {scan.status}
-                  {" — "}
-                  {scan.id}
-                </span>
+                <div>
+                  <div>
+                    <b>{scan.source_image_name || "(no image name)"}</b>
+                  </div>
+
+                  <div style={{ fontSize: 12 }}>
+                    {scan.status}
+                    {" | "}
+                    {(scan.updated_at || scan.created_at || "")
+                      .replace("T", " ")
+                      .replace("Z", "")}
+                  </div>
+
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    {scan.id}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
