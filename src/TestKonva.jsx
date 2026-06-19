@@ -1063,7 +1063,11 @@ export default function TestKonva() {
 
                 setOcrSections({ ...ocrSections, ingredients });
               }}
-              style={{ marginBottom: 8 }}
+              style={{
+                  marginBottom: 8,
+                  display: "block",
+                  alignSelf: "flex-start",
+                }}
             >
               Add Ingredient Row
             </button>
@@ -1078,7 +1082,7 @@ export default function TestKonva() {
                     marginBottom: 6,
                }}
              >
-            <div>Amount</div>
+            <div>Amt</div>
             <div>Unit</div>
             <div>Alt Amt</div>
             <div>Alt Unit</div>
