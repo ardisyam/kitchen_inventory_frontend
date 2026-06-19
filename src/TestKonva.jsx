@@ -997,11 +997,94 @@ export default function TestKonva() {
                 <button
                   key={scan.id}
                   type="button"
-                    onClick={() => {
+
+                    onClick={async () => {
+                      console.log("Selected scan:", scan);
+                      console.log("source_image_url:", scan.source_image_url);
+
                       setRecipeScanId(scan.id);
+
+                      if (scan.source_image_url) {
+                        const fullImageUrl = `${API_BASE_URL}${scan.source_image_url}`;
+                        console.log("fullImageUrl:", fullImageUrl);
+                        setImageUrl(fullImageUrl);
+                      }
+
+                      setSelectedFile(null);
                       setRecentScans([]);
-                      console.log("Selected existing scan:", scan.id);
+
+                      try {
+                        const regionsResponse = await apiFetch(
+                          `${API_BASE_URL}/api/recipe-scans/${scan.id}/regions?limit=100`
+                        );
+
+                        const regionsResult = await regionsResponse.json();
+
+                        if (!regionsResponse.ok) {
+                          console.log("Load regions failed:", regionsResult);
+                          alert(regionsResult.message || "Load regions failed.");
+                          return;
+                        }
+
+                        const loadedRects = (regionsResult.items || [])
+                          .map((r) => {
+                            const regionType =
+                              r.label === "serves" && r.region_type === "notes"
+                                ? "serves"
+                                : r.region_type || "unknown";
+
+                            const x = Number(r.x);
+                            const y = Number(r.y);
+                            const width = Number(r.width);
+                            const height = Number(r.height);
+
+                            if ([x, y, width, height].some(Number.isNaN)) return null;
+
+                            return {
+                              id: r.id,
+                              x: width < 0 ? x + width : x,
+                              y: height < 0 ? y + height : y,
+                              width: Math.abs(width),
+                              height: Math.abs(height),
+                              split_x: r.split_x == null ? null : Number(r.split_x),
+                              region_type: regionType,
+                              label: r.label || regionType,
+                              ocr_text: r.ocr_text || "",
+                              parsed_json: r.parsed_json || null,
+                              confidence: r.confidence || null,
+                            };
+                          })
+                          .filter(Boolean);
+
+                        setRectangles(loadedRects);
+
+                        const scanResponse = await apiFetch(
+                          `${API_BASE_URL}/api/recipe-scans/${scan.id}`
+                        );
+
+                        const scanResult = await scanResponse.json();
+
+                        if (!scanResponse.ok) {
+                          console.log("Load scan failed:", scanResult);
+                          alert(scanResult.message || "Load scan failed.");
+                          return;
+                        }
+
+                        if (scanResult.parsed_json) {
+                          setOcrSections(scanResult.parsed_json);
+                        } else {
+                          setOcrSections(null);
+                        }
+
+                        setOcrResult(null);
+
+                        console.log("Selected existing scan and loaded regions:", scan.id);
+                      } catch (err) {
+                        console.error("Load selected scan error:", err);
+                        alert("Load selected scan failed.");
+                      }
                     }}
+
                   style={{
                     display: "block",
                     width: "100%",
