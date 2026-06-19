@@ -12,6 +12,9 @@ import {
 import useImage from "use-image";
 
 export default function TestKonva() {
+// ============================================================
+// SECTION: Main image, drawing, and scan state
+// ============================================================
   const [imageUrl, setImageUrl] = useState(null);
   const [image] = useImage(imageUrl);
   const [rectangles, setRectangles] = useState([]);
@@ -22,9 +25,15 @@ export default function TestKonva() {
   const [recentScans, setRecentScans] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
 
+// ============================================================
+// SECTION: OCR review and recipe conversion state
+// ============================================================
   const [ocrResult, setOcrResult] = useState(null);
   const [ocrSections, setOcrSections] = useState(null);
 
+// ============================================================
+// SECTION: Ingredient matching state
+// ============================================================
   const [createdRecipeId, setCreatedRecipeId] = useState(null);
   const [ingredientMatches, setIngredientMatches] = useState({});
   const [itemSuggestions, setItemSuggestions] = useState({});
@@ -33,12 +42,17 @@ export default function TestKonva() {
   const [categoryCandidates, setCategoryCandidates] = useState({});
   const [categorySearchText, setCategorySearchText] = useState({});
 
+// ============================================================
+// SECTION: Image display scaling
+// ============================================================
   const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
   const scale = image ? Math.min(1, maxViewportWidth / image.width) : 1;
   const stageWidth = image ? image.width * scale : 1200;
   const stageHeight = image ? image.height * scale : 1800;
 
-
+// ============================================================
+// SECTION: Image coordinate helpers
+// ============================================================
   const toImagePos = (stage) => {
     const p = stage.getPointerPosition();
     return {
@@ -47,6 +61,9 @@ export default function TestKonva() {
     };
   };
 
+// ============================================================
+// SECTION: Image resize before upload
+// ============================================================
     const resizeImageFile = (file, maxWidth = 1200, quality = 0.75) => {
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -89,6 +106,9 @@ export default function TestKonva() {
       });
     };
 
+// ============================================================
+// SECTION: Load saved scan regions and OCR review
+// ============================================================
   const loadRegions = async () => {
     console.log("LOAD REGIONS CLICKED");
     console.log("image:", image);
@@ -162,6 +182,9 @@ export default function TestKonva() {
     }
   };
 
+// ============================================================
+// SECTION: Rectangle drawing handlers
+// ============================================================
   const handleMouseDown = (e) => {
     if (!image) return;
 
@@ -213,6 +236,9 @@ export default function TestKonva() {
     setIsDrawing(false);
   };
 
+// ============================================================
+// SECTION: Rectangle edit helpers
+// ============================================================
   const handleUndo = () => {
     setRectangles((prev) => prev.slice(0, -1));
   };
@@ -242,6 +268,9 @@ export default function TestKonva() {
     });
   };
 
+// ============================================================
+// SECTION: Save region rectangles
+// ============================================================
   const handleSave = async () => {
     try {
       const payload = {
@@ -299,6 +328,9 @@ export default function TestKonva() {
     }
   };
 
+// ============================================================
+// SECTION: Create scan and upload image
+// ============================================================
     const uploadRecipeScanImage = async (scanId, file) => {
       const formData = new FormData();
       formData.append("image", file);
@@ -322,7 +354,9 @@ export default function TestKonva() {
     };
 
 
-
+// ============================================================
+// SECTION: OCR execution and OCR review save
+// ============================================================
   const handleRunOcr = async () => {
     if (!recipeScanId) {
       alert("Please create or load a recipe scan first.");
@@ -460,6 +494,9 @@ export default function TestKonva() {
       }
     };
 
+// ============================================================
+// SECTION: Ingredient search and auto-match helpers
+// ============================================================
     const cleanIngredientSearchText = (text) => {
       return (text || "")
         .toLowerCase()
@@ -519,6 +556,9 @@ export default function TestKonva() {
       }
     };
 
+// ============================================================
+// SECTION: Create house item from unmatched ingredient
+// ============================================================
     const toItemDisplayName = (text) => {
       return (text || "")
         .trim()
@@ -586,7 +626,9 @@ export default function TestKonva() {
     };
 
 
-
+// ============================================================
+// SECTION: Save matched ingredients as recipe items
+// ============================================================
     const saveRecipeItemsPhase1 = async () => {
       if (!createdRecipeId) {
         alert("No recipe id found.");
@@ -642,7 +684,9 @@ export default function TestKonva() {
       }
     };
 
-
+// ============================================================
+// SECTION: Convert OCR review to recipe
+// ============================================================
     const handleConvertToRecipe = async () => {
       if (!recipeScanId) {
         alert("Please create or load a recipe scan first.");
@@ -679,6 +723,9 @@ export default function TestKonva() {
       }
     };
 
+// ============================================================
+// SECTION: Measures and quantity parsing
+// ============================================================
     const loadMeasures = async () => {
       try {
         const response = await apiFetch(
@@ -776,6 +823,9 @@ export default function TestKonva() {
       return Number.isFinite(n) && n > 0 ? n : 1;
     };
 
+// ============================================================
+// SECTION: Category search and item category update
+// ============================================================
     const searchCategoriesForIngredient = async (index, text) => {
       const q = (text || "").trim();
 
@@ -837,11 +887,16 @@ export default function TestKonva() {
       }
     };
 
-
+// ============================================================
+// SECTION: Render UI
+// ============================================================
   return (
     <div style={{ padding: 20 }}>
       <h2>Recipe Scan Region Editor</h2>
 
+{/* ============================================================
+    UI: Image file picker
+   ============================================================ */}
       <input
         type="file"
         accept="image/*"
@@ -870,27 +925,10 @@ export default function TestKonva() {
         }}
       />
 
+{/* ============================================================
+    UI: Recent scans panel
+   ============================================================ */}
       <div style={{ marginTop: 10, marginBottom: 10 }}>
-{/*        <button onClick={loadRecentScans}>Recent Scans</button> */}
-{/*        <button onClick={createNewScan}disabled={!image || !selectedFile}>Create New Scan</button> */}
-{/*           <input */}
-{/*             placeholder="Recipe Scan ID" */}
-{/*             value={recipeScanId || ""} */}
-{/*             onChange={(e) => setRecipeScanId(e.target.value)} */}
-{/*             style={{ width: 280 }} */}
-{/*           /> */}
-{/*         <button onClick={loadRegions} disabled={!image || !recipeScanId}>Load</button> */}
-{/*         <button onClick={() => setCurrentLabel("title")}>Title</button> */}
-{/*         <button onClick={() => setCurrentLabel("notes")}>Notes</button> */}
-{/*         <button onClick={() => setCurrentLabel("serves")}>Serves</button> */}
-{/*         <button onClick={() => setCurrentLabel("ingredients")}>Ingr</button> */}
-{/*         <button onClick={() => setCurrentLabel("instructions")}>Steps</button> */}
-{/*         <button onClick={() => setCurrentLabel("instruction_column")}>Step Col</button> */}
-{/*         <button onClick={handleUndo}>Undo</button> */}
-{/*         <button onClick={handleSave} disabled={!recipeScanId}>Save</button> */}
-{/*         <button onClick={handleRunOcr} disabled={!recipeScanId}>Run OCR</button> */}
-{/*         <button onClick={() => setRectangles([])}>Clear</button> */}
-{/* Row 1 */}
             <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
               <button onClick={loadRecentScans}>Recent Scans</button>
 
@@ -1005,6 +1043,9 @@ export default function TestKonva() {
           </div>
         )}
 
+{/* ============================================================
+    UI: OCR review editor
+   ============================================================ */}
       {ocrSections && (
         <div
           style={{
@@ -1263,7 +1304,9 @@ export default function TestKonva() {
         </div>
       )}
 
-
+{/* ============================================================
+    UI: Ingredient item matching
+   ============================================================ */}
         {showIngredientMatching && (
           <div
             style={{
@@ -1385,6 +1428,9 @@ export default function TestKonva() {
         Current Label: <b>{currentLabel}</b>
       </div>
 
+{/* ============================================================
+    UI: Konva image canvas and region rectangles
+   ============================================================ */}
       <Stage
         width={stageWidth}
         height={stageHeight}
