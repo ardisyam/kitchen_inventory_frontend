@@ -32,7 +32,6 @@ export default function TestKonva() {
   const [measureLookup, setMeasureLookup] = useState({});
   const [categoryCandidates, setCategoryCandidates] = useState({});
   const [categorySearchText, setCategorySearchText] = useState({});
-  const [showCategoryEditor, setShowCategoryEditor] = useState({});
 
   const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
   const scale = image ? Math.min(1, maxViewportWidth / image.width) : 1;
@@ -1226,11 +1225,15 @@ export default function TestKonva() {
               }}
             >
               <button onClick={autoMatchIngredients}>
-                Auto Match Ingredients
+                Match Ingredients
               </button>
 
               <button onClick={saveRecipeItemsPhase1}>
                 Save Recipe Items
+              </button>
+
+              <button onClick={() => alert("Category Manager coming soon")}>
+                Manage Categories
               </button>
             </div>
 
