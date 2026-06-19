@@ -889,7 +889,6 @@ export default function TestKonva() {
         <button onClick={handleUndo}>Undo</button>
         <button onClick={handleSave} disabled={!recipeScanId}>Save</button>
         <button onClick={handleRunOcr} disabled={!recipeScanId}>Run OCR</button>
-        <button onClick={handleConvertToRecipe} disabled={!recipeScanId}>Convert to Recipe</button>
         <button onClick={() => setRectangles([])}>Clear</button>
       </div>
 
@@ -972,14 +971,29 @@ export default function TestKonva() {
             background: "#fafafa",
           }}
         >
-          <h2>OCR Review</h2>
-            <button
-              onClick={saveOcrReview}
-              disabled={!recipeScanId || !ocrSections}
-              style={{ marginBottom: 12 }}
+            <h2>OCR Review</h2>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginBottom: 12,
+              }}
             >
-              Save OCR Review
-            </button>
+              <button
+                onClick={saveOcrReview}
+                disabled={!recipeScanId || !ocrSections}
+              >
+                Save OCR Review
+              </button>
+
+              <button
+                onClick={handleConvertToRecipe}
+                disabled={!recipeScanId || !ocrSections}
+              >
+                Convert to Recipe
+              </button>
+            </div>
 
           <div style={{ marginBottom: 12 }}>
             <label>
@@ -1202,12 +1216,21 @@ export default function TestKonva() {
               <b>Recipe ID:</b> {createdRecipeId || "(not found)"}
             </div>
 
-            <button
-              onClick={autoMatchIngredients}
-              style={{ marginBottom: 12 }}
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginBottom: 12,
+              }}
             >
-              Auto Match Ingredients
-            </button>
+              <button onClick={autoMatchIngredients}>
+                Auto Match Ingredients
+              </button>
+
+              <button onClick={saveRecipeItemsPhase1}>
+                Save Recipe Items
+              </button>
+            </div>
 
             <div
               style={{
@@ -1353,9 +1376,6 @@ export default function TestKonva() {
               );
             })}
 
-            <button onClick={saveRecipeItemsPhase1}>
-              Save Recipe Items
-            </button>
           </div>
         )}
 
