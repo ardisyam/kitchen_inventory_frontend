@@ -1070,8 +1070,8 @@ export default function TestKonva() {
 
           <div style={{
                     display: "grid",
-                    gridTemplateColumns: "70px 80px 70px 80px 320px 220px",
-                    minWidth: 860,
+                    gridTemplateColumns: "50px 50px 50px 50px 200px 200px",
+                    minWidth: 600,
                     alignItems: "center",
                     gap: 8,
                     fontWeight: "bold",
@@ -1091,8 +1091,8 @@ export default function TestKonva() {
               key={index}
               style={{
                 display: "grid",
-                gridTemplateColumns: "70px 80px 70px 80px 320px 220px",
-                minWidth: 860,
+                gridTemplateColumns: "50px 50px 50px 50px 200px 200px",
+                minWidth: 600,
                 alignItems: "center",
                 gap: 8,
                 marginBottom: 8,
@@ -1156,6 +1156,7 @@ export default function TestKonva() {
                   };
                   setOcrSections({ ...ocrSections, ingredients });
                 }}
+               style={{ width: "100%" }}
               />
 
                 <input
@@ -1168,6 +1169,7 @@ export default function TestKonva() {
                     };
                     setOcrSections({ ...ocrSections, ingredients });
                   }}
+                  style={{ width: "100%" }}
                 />
 
 
