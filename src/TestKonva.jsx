@@ -870,26 +870,70 @@ export default function TestKonva() {
         }}
       />
 
-      <div style={{ marginTop: 10, marginBottom: 10, display: "flex", gap: 8 }}>
-       <button onClick={loadRecentScans}>Recent Scans</button>
-       <button onClick={createNewScan}disabled={!image || !selectedFile}>Create New Scan</button>
-          <input
-            placeholder="Recipe Scan ID"
-            value={recipeScanId || ""}
-            onChange={(e) => setRecipeScanId(e.target.value)}
-            style={{ width: 280 }}
-          />
-        <button onClick={loadRegions} disabled={!image || !recipeScanId}>Load</button>
-        <button onClick={() => setCurrentLabel("title")}>Title</button>
-        <button onClick={() => setCurrentLabel("notes")}>Notes</button>
-        <button onClick={() => setCurrentLabel("serves")}>Serves</button>
-        <button onClick={() => setCurrentLabel("ingredients")}>Ingredients</button>
-        <button onClick={() => setCurrentLabel("instructions")}>Instructions</button>
-        <button onClick={() => setCurrentLabel("instruction_column")}>Instruction Column</button>
-        <button onClick={handleUndo}>Undo</button>
-        <button onClick={handleSave} disabled={!recipeScanId}>Save</button>
-        <button onClick={handleRunOcr} disabled={!recipeScanId}>Run OCR</button>
-        <button onClick={() => setRectangles([])}>Clear</button>
+      <div style={{ marginTop: 10, marginBottom: 10 }}>
+{/*        <button onClick={loadRecentScans}>Recent Scans</button> */}
+{/*        <button onClick={createNewScan}disabled={!image || !selectedFile}>Create New Scan</button> */}
+{/*           <input */}
+{/*             placeholder="Recipe Scan ID" */}
+{/*             value={recipeScanId || ""} */}
+{/*             onChange={(e) => setRecipeScanId(e.target.value)} */}
+{/*             style={{ width: 280 }} */}
+{/*           /> */}
+{/*         <button onClick={loadRegions} disabled={!image || !recipeScanId}>Load</button> */}
+{/*         <button onClick={() => setCurrentLabel("title")}>Title</button> */}
+{/*         <button onClick={() => setCurrentLabel("notes")}>Notes</button> */}
+{/*         <button onClick={() => setCurrentLabel("serves")}>Serves</button> */}
+{/*         <button onClick={() => setCurrentLabel("ingredients")}>Ingr</button> */}
+{/*         <button onClick={() => setCurrentLabel("instructions")}>Steps</button> */}
+{/*         <button onClick={() => setCurrentLabel("instruction_column")}>Step Col</button> */}
+{/*         <button onClick={handleUndo}>Undo</button> */}
+{/*         <button onClick={handleSave} disabled={!recipeScanId}>Save</button> */}
+{/*         <button onClick={handleRunOcr} disabled={!recipeScanId}>Run OCR</button> */}
+{/*         <button onClick={() => setRectangles([])}>Clear</button> */}
+{/* Row 1 */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+              <button onClick={loadRecentScans}>Recent Scans</button>
+
+              <button
+                onClick={createNewScan}
+                disabled={!image || !selectedFile}
+              >
+                Create New Scan
+              </button>
+
+              <input
+                placeholder="Recipe Scan ID"
+                value={recipeScanId || ""}
+                onChange={(e) => setRecipeScanId(e.target.value)}
+                style={{ width: 280 }}
+              />
+
+              <button
+                onClick={loadRegions}
+                disabled={!image || !recipeScanId}
+              >
+                Load
+              </button>
+            </div>
+
+            {/* Row 2 */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+              <button onClick={() => setCurrentLabel("title")}>Title</button>
+              <button onClick={() => setCurrentLabel("serves")}>Serves</button>
+              <button onClick={() => setCurrentLabel("ingredients")}>Ingr</button>
+              <button onClick={() => setCurrentLabel("instructions")}>Steps</button>
+              <button onClick={() => setCurrentLabel("instruction_column")}>Step Col</button>
+              <button onClick={() => setCurrentLabel("notes")}>Notes</button>
+            </div>
+
+            {/* Row 3 */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button onClick={handleUndo}>Undo</button>
+              <button onClick={handleSave} disabled={!recipeScanId}>Save</button>
+              <button onClick={handleRunOcr} disabled={!recipeScanId}>Run OCR</button>
+              <button onClick={() => setRectangles([])}>Clear</button>
+            </div>
+
       </div>
 
         {recentScans.length > 0 && (
