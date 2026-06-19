@@ -1070,8 +1070,8 @@ export default function TestKonva() {
 
           <div style={{
                     display: "grid",
-                    gridTemplateColumns: "50px 50px 50px 50px 200px 200px",
-                    minWidth: 600,
+                    gridTemplateColumns: "45px 45px 45px 45px minmax(0, 1fr)",
+                    width: "100%",
                     alignItems: "center",
                     gap: 8,
                     fontWeight: "bold",
@@ -1082,8 +1082,7 @@ export default function TestKonva() {
             <div>Unit</div>
             <div>Alt Amt</div>
             <div>Alt Unit</div>
-            <div>Ingredient</div>
-            <div>Preparation</div>
+            <div>Ingredient/Preparation</div>
           </div>
 
           {(ocrSections.ingredients || []).map((item, index) => (
@@ -1091,8 +1090,8 @@ export default function TestKonva() {
               key={index}
               style={{
                 display: "grid",
-                gridTemplateColumns: "50px 50px 50px 50px 200px 200px",
-                minWidth: 600,
+                gridTemplateColumns: "45px 45px 45px 45px minmax(0, 1fr)",
+                width: "100%",
                 alignItems: "center",
                 gap: 8,
                 marginBottom: 8,
@@ -1146,31 +1145,46 @@ export default function TestKonva() {
                 }}
               />
 
-              <input
-                value={item.ingredient_text || ""}
-                onChange={(e) => {
-                  const ingredients = [...(ocrSections.ingredients || [])];
-                  ingredients[index] = {
-                    ...ingredients[index],
-                    ingredient_text: e.target.value,
-                  };
-                  setOcrSections({ ...ocrSections, ingredients });
-                }}
-               style={{ width: "100%" }}
-              />
-
-                <input
-                  value={item.preparation_text || ""}
-                  onChange={(e) => {
-                    const ingredients = [...(ocrSections.ingredients || [])];
-                    ingredients[index] = {
-                      ...ingredients[index],
-                      preparation_text: e.target.value,
-                    };
-                    setOcrSections({ ...ocrSections, ingredients });
-                  }}
-                  style={{ width: "100%" }}
-                />
+                <div
+                  style={{
+                    minWidth: 0,
+                  }}                
+                >
+                  <input
+                    value={item.ingredient_text || ""}
+                    onChange={(e) => {
+                      const ingredients = [...(ocrSections.ingredients || [])];
+                      ingredients[index] = {
+                        ...ingredients[index],
+                        ingredient_text: e.target.value,
+                      };
+                      setOcrSections({ ...ocrSections, ingredients });
+                    }}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                
+                  <input
+                    placeholder="↳ preparation"
+                    value={item.preparation_text || ""}
+                    onChange={(e) => {
+                      const ingredients = [...(ocrSections.ingredients || [])];
+                      ingredients[index] = {
+                        ...ingredients[index],
+                        preparation_text: e.target.value,
+                      };
+                      setOcrSections({ ...ocrSections, ingredients });
+                    }}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      marginTop: 4,
+                      fontSize: "0.9em",
+                    }}
+                  />
+                </div>
 
 
             </div>
