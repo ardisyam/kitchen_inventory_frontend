@@ -32,6 +32,7 @@ export default function TestKonva() {
   const [measureLookup, setMeasureLookup] = useState({});
   const [categoryCandidates, setCategoryCandidates] = useState({});
   const [categorySearchText, setCategorySearchText] = useState({});
+  const [showCategoryEditor, setShowCategoryEditor] = useState({});
 
   const maxViewportWidth = Math.min(window.innerWidth - 40, 900);
   const scale = image ? Math.min(1, maxViewportWidth / image.width) : 1;
@@ -1208,6 +1209,7 @@ export default function TestKonva() {
               border: "1px solid #ccc",
               borderRadius: 8,
               background: "#f7f7f7",
+              textAlign: "left",
             }}
           >
             <h2>Ingredient Item Matching</h2>
@@ -1235,15 +1237,16 @@ export default function TestKonva() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 260px 260px",
+                gridTemplateColumns: "140px 1fr",
                 gap: 8,
                 fontWeight: "bold",
                 marginBottom: 6,
+                justifyContent: "start",
+                width: "100%",
               }}
             >
-              <div>Ingredient</div>
-              <div>Matched Item</div>
-              <div>Category</div>
+            <div>Ingredient</div>
+            <div>Matched Item / Actions</div>
             </div>
 
             {(ocrSections?.ingredients || []).map((ingredient, index) => {
@@ -1254,36 +1257,41 @@ export default function TestKonva() {
                   key={index}
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 260px 260px",
+                    gridTemplateColumns: "140px 1fr",
                     gap: 8,
                     marginBottom: 8,
                     alignItems: "start",
+                    justifyContent: "start",
+                    width: "100%",
                   }}
                 >
+
                   <div>{ingredient.ingredient_text || ""}</div>
 
-                  <div>
-                    <select
-                      value={ingredientMatches[index] || ""}
-                      onChange={(e) =>
-                        setIngredientMatches((prev) => ({
-                          ...prev,
-                          [index]: e.target.value,
-                        }))
-                      }
-                      style={{ width: "100%" }}
-                    >
-                      <option value="">No matching item — create new item</option>
+                    <div>
+                      {suggestions.length > 0 ? (
+                        <>
+                          <select
+                            value={ingredientMatches[index] || ""}
+                            onChange={(e) =>
+                              setIngredientMatches((prev) => ({
+                                ...prev,
+                                [index]: e.target.value,
+                              }))
+                            }
+                            style={{ width: 150}}
+                          >
+                            <option value="">Select item</option>
 
-                      {suggestions.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name || item.slug || item.id}
-                        </option>
-                      ))}
-                    </select>
+                            {suggestions.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name || item.slug || item.id}
+                              </option>
+                            ))}
+                          </select>
 
-                    {!ingredientMatches[index] ? (
-                      <div style={{ marginTop: 6 }}>
+                        </>
+                      ) : (
                         <button
                           type="button"
                           onClick={() =>
@@ -1295,83 +1303,8 @@ export default function TestKonva() {
                         >
                           Create New Item
                         </button>
-                      </div>
-                    ) : (
-                      <div style={{ marginTop: 6, color: "green" }}>
-                        Selected
-                      </div>
-                    )}
-                  </div>
-
-                    <div>
-                      {suggestions.length > 0 && (
-                        <>
-                          <select
-                            value={suggestions[0]?.category_id || ""}
-                            
-                          onChange={async (e) => {
-                            const categoryId = e.target.value;
-                            const updatedSuggestions = [...suggestions];
-
-                            if (updatedSuggestions[0]) {
-                              updatedSuggestions[0] = {
-                                ...updatedSuggestions[0],
-                                category_id: categoryId,
-                              };
-
-                              await updateItemCategory(
-                                updatedSuggestions[0].id,
-                                categoryId
-                              );
-                            }
-
-                            setItemSuggestions((prev) => ({
-                              ...prev,
-                              [index]: updatedSuggestions,
-                            }));
-                          }}
-                          style={{ display: "block", width: "100%", marginTop: 4 }}
-                        >
-                          <option value="">Select category</option>
-
-                          {(categoryCandidates[index] || []).map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-
-                        <input
-                          placeholder="Search category..."
-                          value={categorySearchText[index] || ""}
-                          onChange={(e) =>
-                            setCategorySearchText((prev) => ({
-                              ...prev,
-                              [index]: e.target.value,
-                            }))
-                          }
-                          style={{
-                            display: "block",
-                            width: "100%",
-                            marginTop: 6,
-                          }}
-                        />
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            searchCategoriesForIngredient(
-                              index,
-                              categorySearchText[index] || ""
-                            )
-                          }
-                          style={{ marginTop: 4 }}
-                        >
-                          Search Category
-                        </button>
-                      </>
-                    )}
-                  </div>
+                      )}
+                    </div>
                 </div>
               );
             })}
