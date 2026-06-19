@@ -959,10 +959,11 @@ export default function TestKonva() {
                 <button
                   key={scan.id}
                   type="button"
-                  onClick={() => {
-                    setRecipeScanId(scan.id);
-                    console.log("Selected existing scan:", scan.id);
-                  }}
+                    onClick={() => {
+                      setRecipeScanId(scan.id);
+                      setRecentScans([]);
+                      console.log("Selected existing scan:", scan.id);
+                    }}
                   style={{
                     display: "block",
                     width: "100%",
