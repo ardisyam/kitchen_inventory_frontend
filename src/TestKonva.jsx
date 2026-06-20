@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { apiFetch } from "./apiFetch";
 import { API_BASE_URL } from "./config";
 import {
@@ -41,6 +41,34 @@ export default function TestKonva() {
   const [measureLookup, setMeasureLookup] = useState({});
   const [categoryCandidates, setCategoryCandidates] = useState({});
   const [categorySearchText, setCategorySearchText] = useState({});
+  const [dietaries, setDietaries] = useState([]);
+  const [selectedDietaryIds, setSelectedDietaryIds] = useState([]);
+
+    // ============================================================
+    // SECTION: Load dietaries
+    // ============================================================
+    useEffect(() => {
+      async function loadDietaries() {
+        try {
+          const response = await apiFetch(
+            `${API_BASE_URL}/api/dietaries?limit=100`
+          );
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            console.log("Load dietaries failed:", result);
+            return;
+          }
+
+          setDietaries(result.items || []);
+        } catch (err) {
+          console.error("Load dietaries error:", err);
+        }
+      }
+
+      loadDietaries();
+    }, []);
 
 // ============================================================
 // SECTION: Image display scaling
@@ -1180,21 +1208,107 @@ export default function TestKonva() {
             />
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <label>
-              <b>Serves</b>
-            </label>
-            <input
-              value={ocrSections.serves || ""}
-              onChange={(e) =>
-                setOcrSections({
-                  ...ocrSections,
-                  serves: e.target.value,
-                })
-              }
-              style={{ display: "block", width: 120, marginTop: 4 }}
-            />
-          </div>
+{/* SECTION: Recipe metadata (serves and dietary) */}
+            <div
+              style={{
+                display: "flex",
+                gap: 16,
+                alignItems: "flex-start",
+                marginBottom: 12,
+              }}
+            >
+
+{/* The Serves part */}
+              <div>
+                <label>
+                  <b>Serves</b>
+                </label>
+            
+                <input
+                  value={ocrSections.serves || ""}
+                  onChange={(e) =>
+                    setOcrSections({
+                      ...ocrSections,
+                      serves: e.target.value,
+                    })
+                  }
+                  style={{
+                    display: "block",
+                    width: 120,
+                    marginTop: 4,
+                  }}
+                />
+              </div>
+
+{/* The Dietary part */}
+                <div>
+                  <label>
+                    <b>Dietary</b>
+                  </label>
+
+                  <select
+                    defaultValue=""
+                    onChange={(e) => {
+                      const dietaryId = e.target.value;
+
+                      if (!dietaryId) return;
+
+                      setSelectedDietaryIds((prev) =>
+                        prev.includes(dietaryId)
+                          ? prev
+                          : [...prev, dietaryId]
+                      );
+
+                      e.target.value = "";
+                    }}
+                    style={{
+                      display: "block",
+                      width: 220,
+                      marginTop: 4,
+                    }}
+                  >
+                    <option value="">Add dietary...</option>
+
+                    {dietaries.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div
+                    style={{
+                      marginTop: 6,
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      maxWidth: 300,
+                    }}
+                  >
+                    {selectedDietaryIds.map((dietaryId) => {
+                      const dietary = dietaries.find(
+                        (d) => d.id === dietaryId
+                      );
+
+                      return (
+                        <button
+                          key={dietaryId}
+                          type="button"
+                          onClick={() =>
+                            setSelectedDietaryIds((prev) =>
+                              prev.filter((x) => x !== dietaryId)
+                            )
+                          }
+                        >
+                          {dietary?.name || dietaryId} ×
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+            </div>
+{/* */}
 
           <div style={{ marginBottom: 12 }}>
             <label>
