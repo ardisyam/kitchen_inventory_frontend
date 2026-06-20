@@ -1577,41 +1577,41 @@ export default function TestKonva() {
                   <div>{ingredient.ingredient_text || ""}</div>
 
                     <div>
-                      {suggestions.length > 0 ? (
+                    {/* Item selection and item creation */}
                         <>
-                          <select
-                            value={ingredientMatches[index] || ""}
-                            onChange={(e) =>
-                              setIngredientMatches((prev) => ({
-                                ...prev,
-                                [index]: e.target.value,
-                              }))
+                          {suggestions.length > 0 && (
+                            <select
+                              value={ingredientMatches[index] || ""}
+                              onChange={(e) =>
+                                setIngredientMatches((prev) => ({
+                                  ...prev,
+                                  [index]: e.target.value,
+                                }))
+                              }
+                              style={{ width: 150, marginRight: 8 }}
+                            >
+                              <option value="">Select item</option>
+
+                              {suggestions.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {item.name || item.slug || item.id}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              createHouseItemForIngredient(
+                                index,
+                                ingredient.ingredient_text || ""
+                              )
                             }
-                            style={{ width: 150}}
                           >
-                            <option value="">Select item</option>
-
-                            {suggestions.map((item) => (
-                              <option key={item.id} value={item.id}>
-                                {item.name || item.slug || item.id}
-                              </option>
-                            ))}
-                          </select>
-
+                            Create New Item
+                          </button>
                         </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            createHouseItemForIngredient(
-                              index,
-                              ingredient.ingredient_text || ""
-                            )
-                          }
-                        >
-                          Create New Item
-                        </button>
-                      )}
                     </div>
                 </div>
               );
