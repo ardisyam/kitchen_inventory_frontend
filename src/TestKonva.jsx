@@ -440,7 +440,10 @@ export default function TestKonva() {
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(ocrSections),
+            body: JSON.stringify({
+              ...ocrSections,
+              dietary_ids: selectedDietaryIds,
+            }),
           }
         );
 
@@ -1115,8 +1118,10 @@ export default function TestKonva() {
 
                         if (scanResult.parsed_json) {
                           setOcrSections(scanResult.parsed_json);
+                          setSelectedDietaryIds(scanResult.parsed_json.dietary_ids || []);
                         } else {
                           setOcrSections(null);
+                          setSelectedDietaryIds([]);
                         }
 
                         setCreatedRecipeId(scanResult.recipe_id || null);
