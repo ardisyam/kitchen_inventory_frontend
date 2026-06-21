@@ -1577,49 +1577,105 @@ export default function TestKonva() {
                   <div>{ingredient.ingredient_text || ""}</div>
 
                     <div>
-                    {/* Item selection and item creation */}
-                        <>
-                          {suggestions.length > 0 && (
-                            <select
-                              value={ingredientMatches[index] || ""}
-                              onChange={(e) =>
-                                setIngredientMatches((prev) => ({
-                                  ...prev,
-                                  [index]: e.target.value,
-                                }))
-                              }
-                              style={{ width: 150, marginRight: 8 }}
-                            >
-                              <option value="">Select item</option>
+                      {/* Item selection and item creation */}
+                      {suggestions.length > 0 && (
+                        <select
+                          value={ingredientMatches[index] || ""}
+                          onChange={(e) =>
+                            setIngredientMatches((prev) => ({
+                              ...prev,
+                              [index]: e.target.value,
+                            }))
+                          }
+                          style={{ width: 150, marginRight: 8 }}
+                        >
+                          <option value="">Select item</option>
 
-                              {suggestions.map((item) => (
-                                <option key={item.id} value={item.id}>
-                                  {item.name || item.slug || item.id}
-                                </option>
-                              ))}
-                            </select>
-                          )}
+                          {suggestions.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.name || item.slug || item.id}
+                            </option>
+                          ))}
+                        </select>
+                      )}
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              createHouseItemForIngredient(
-                                index,
-                                ingredient.ingredient_text || ""
-                              )
-                            }
-                          >
-                            Create New Item
-                          </button>
-                        </>
-                    </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          createHouseItemForIngredient(index, ingredient.ingredient_text || "")
+                        }
+                      >
+                        Create New Item
+                      </button>
+
+                    {/* Whole category section */}
+                    {ingredientMatches[index] && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          display: "flex",
+                          gap: 4,
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <select
+                          defaultValue=""
+                          onChange={(e) => {
+                            const categoryId = e.target.value;
+
+                            if (!categoryId) return;
+
+                            updateItemCategory(
+                              ingredientMatches[index],
+                              categoryId
+                            );
+                          }}
+                        >
+                          <option value="">Select category</option>
+
+                          {(categoryCandidates[index] || []).map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <input
+                          type="text"
+                          placeholder="category"
+                          value={categorySearchText[index] || ""}
+                          onChange={(e) =>
+                            setCategorySearchText((prev) => ({
+                              ...prev,
+                              [index]: e.target.value,
+                            }))
+                          }
+                          style={{ width: 87.5 }}
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            searchCategoriesForIngredient(
+                              index,
+                              categorySearchText[index] || ""
+                            )
+                          }
+                        >
+                          Search
+                        </button>
+                      </div>
+                    )}
+
+
+                  </div>
                 </div>
               );
             })}
 
           </div>
         )}
-
 
       <div style={{ marginBottom: 10 }}>
         Current Label: <b>{currentLabel}</b>
