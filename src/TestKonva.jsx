@@ -204,6 +204,12 @@ export default function TestKonva() {
           setOcrSections(null);
           console.log("No saved OCR review found.");
         }
+
+        setCreatedRecipeId(scanResult.recipe_id || null);
+        setShowIngredientMatching(Boolean(scanResult.recipe_id));
+
+        setIngredientMatches({});
+        setItemSuggestions({});
       
     } catch (err) {
       console.error("Load regions error:", err);
@@ -569,6 +575,8 @@ export default function TestKonva() {
             ...prev,
             [index]: items[0].id,
           }));
+
+          await searchCategoriesForIngredient(index, ingredientText);
         }
       } catch (err) {
         console.error("Item search error:", err);
@@ -631,6 +639,9 @@ export default function TestKonva() {
 
         const newItem = result.item || result.data || result;
 
+        console.log("NEW ITEM", newItem);
+        console.log("CATEGORY CANDIDATES", newItem.category_candidates);
+
         setCategoryCandidates((prev) => ({
           ...prev,
           [index]: newItem.category_candidates || [],
@@ -645,6 +656,8 @@ export default function TestKonva() {
           ...prev,
           [index]: newItem.id,
         }));
+
+        await searchCategoriesForIngredient(index, ingredientText);
 
         alert(`Created house item: ${newItem.name}`);
       } catch (err) {
@@ -856,6 +869,7 @@ export default function TestKonva() {
 // ============================================================
     const searchCategoriesForIngredient = async (index, text) => {
       const q = (text || "").trim();
+      console.log("CATEGORY SEARCH:", index, text);
 
       if (!q) {
         alert("Please type a category search term.");
@@ -868,6 +882,7 @@ export default function TestKonva() {
         );
 
         const result = await response.json();
+        console.log("CATEGORY RESULT:", result);
 
         if (!response.ok) {
           console.log("Category search failed:", result);
@@ -1103,6 +1118,12 @@ export default function TestKonva() {
                         } else {
                           setOcrSections(null);
                         }
+
+                        setCreatedRecipeId(scanResult.recipe_id || null);
+                        setShowIngredientMatching(Boolean(scanResult.recipe_id));
+
+                        setIngredientMatches({});
+                        setItemSuggestions({});
 
                         setOcrResult(null);
 
@@ -1581,12 +1602,21 @@ export default function TestKonva() {
                       {suggestions.length > 0 && (
                         <select
                           value={ingredientMatches[index] || ""}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const itemId = e.target.value;
+
                             setIngredientMatches((prev) => ({
                               ...prev,
-                              [index]: e.target.value,
-                            }))
-                          }
+                              [index]: itemId,
+                            }));
+
+                            if (itemId) {
+                              searchCategoriesForIngredient(
+                                index,
+                                cleanIngredientSearchText(ingredient.ingredient_text || "")
+                              );
+                            }
+                          }}
                           style={{ width: 150, marginRight: 8 }}
                         >
                           <option value="">Select item</option>
