@@ -1661,6 +1661,7 @@ export default function TestKonva() {
                               categoryId
                             );
                           }}
+                          style={{ width: 150 }}
                         >
                           <option value="">Select category</option>
 
