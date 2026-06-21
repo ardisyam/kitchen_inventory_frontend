@@ -210,6 +210,10 @@ export default function TestKonva() {
 
         setIngredientMatches({});
         setItemSuggestions({});
+
+        if (scanResult.recipe_id) {
+          await restoreRecipeItemMatches(scanResult.recipe_id);
+        }
       
     } catch (err) {
       console.error("Load regions error:", err);
@@ -904,7 +908,9 @@ export default function TestKonva() {
     };
 
 
-
+{/* ============================================================
+    UI: Recipe Item Matches
+   ============================================================ */}
 
     const updateItemCategory = async (itemId, categoryId) => {
       try {
@@ -932,6 +938,62 @@ export default function TestKonva() {
         alert("Update item category failed.");
       }
     };
+
+
+
+    const restoreRecipeItemMatches = async (recipeId) => {
+      if (!recipeId) return;
+
+      try {
+        const response = await apiFetch(
+          `${API_BASE_URL}/api/recipe-items?recipe_id=${encodeURIComponent(recipeId)}&limit=200`
+        );
+
+        const result = await response.json();
+
+//         console.log("RESTORE MATCHES recipeId:", recipeId);
+//         console.log("RESTORE MATCHES result:", result);
+
+        if (!response.ok) {
+          console.log("Restore recipe item matches failed:", result);
+          return;
+        }
+
+        const restoredMatches = {};
+        const restoredSuggestions = {};
+
+        for (const recipeItem of result.items || []) {
+          const index = Math.floor((recipeItem.sort_order || 10) / 10) - 1;
+
+          if (index < 0 || !recipeItem.item_id) continue;
+
+          restoredMatches[index] = recipeItem.item_id;
+
+          const itemResponse = await apiFetch(
+            `${API_BASE_URL}/api/items/${recipeItem.item_id}`
+          );
+
+          const itemResult = await itemResponse.json();
+
+//           console.log("RESTORE MATCHES itemResult:", itemResult);
+
+          if (itemResponse.ok) {
+            restoredSuggestions[index] = [
+              itemResult.item || itemResult.data || itemResult,
+            ];
+          }
+        }
+
+//         console.log("RESTORE MATCHES restoredMatches:", restoredMatches);
+//         console.log("RESTORE MATCHES restoredSuggestions:", restoredSuggestions);
+
+        setIngredientMatches(restoredMatches);
+        setItemSuggestions(restoredSuggestions);
+      } catch (err) {
+        console.error("Restore recipe item matches error:", err);
+      }
+    };
+
 
 // ============================================================
 // SECTION: Render UI
@@ -1130,6 +1192,10 @@ export default function TestKonva() {
                         setIngredientMatches({});
                         setItemSuggestions({});
 
+                        if (scanResult.recipe_id) {
+                          await restoreRecipeItemMatches(scanResult.recipe_id);
+                        }
+                        
                         setOcrResult(null);
 
                         console.log("Selected existing scan and loaded regions:", scan.id);
