@@ -25,6 +25,12 @@ export default function TestKonva() {
   const [recentScans, setRecentScans] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
 
+
+  
+  const [houses, setHouses] = useState([]);
+  const [selectedHouseId, setSelectedHouseId] = useState("");
+
+
 // ============================================================
 // SECTION: OCR review and recipe conversion state
 // ============================================================
@@ -43,6 +49,31 @@ export default function TestKonva() {
   const [categorySearchText, setCategorySearchText] = useState({});
   const [dietaries, setDietaries] = useState([]);
   const [selectedDietaryIds, setSelectedDietaryIds] = useState([]);
+
+    useEffect(() => {
+      async function loadHouses() {
+        try {
+          const response = await apiFetch(`${API_BASE_URL}/api/houses`);
+          const result = await response.json();
+
+          if (!response.ok) {
+            console.log("Load houses failed:", result);
+            return;
+          }
+
+          setHouses(Array.isArray(result) ? result : result.items || []);
+
+          const houseList = Array.isArray(result) ? result : result.items || [];
+          if (houseList.length === 1) {
+            setSelectedHouseId(houseList[0].id);
+          }
+        } catch (err) {
+          console.error("Load houses error:", err);
+        }
+      }
+
+      loadHouses();
+    }, []);
 
     // ============================================================
     // SECTION: Load dietaries
@@ -491,14 +522,19 @@ export default function TestKonva() {
         return;
       }
 
-      try {
-        const response = await apiFetch(`${API_BASE_URL}/api/recipe-scans`, {
+        if (!selectedHouseId) {
+          alert("Please select a house first.");
+          return;
+        }
+
+        try {
+          const response = await apiFetch(`${API_BASE_URL}/api/recipe-scans`, {
           method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              house_id: localStorage.getItem("house_id_under_test"),
+              house_id: selectedHouseId,
               source_image_name: selectedFile.name,
               image_width: image?.width || null,
               image_height: image?.height || null,
@@ -621,8 +657,12 @@ export default function TestKonva() {
       }
 
       try {
-        const houseId = localStorage.getItem("house_id_under_test");
-
+        const houseId = selectedHouseId;
+        console.log("CREATE HOUSE ITEM houseId:", houseId);
+        if (!houseId) {
+          alert("No active house selected. Please select a house first.");
+          return;
+        }
         const response = await apiFetch(`${API_BASE_URL}/api/items`, {
           method: "POST",
           headers: {
@@ -1001,6 +1041,26 @@ export default function TestKonva() {
   return (
     <div style={{ padding: 20 }}>
       <h2>Recipe Scan Region Editor</h2>
+
+        <div style={{ marginTop: 10, marginBottom: 10 }}>
+          <label>
+            <b>House</b>
+          </label>
+
+          <select
+            value={selectedHouseId}
+            onChange={(e) => setSelectedHouseId(e.target.value)}
+            style={{ marginLeft: 8, width: 260 }}
+          >
+            <option value="">Select house...</option>
+
+            {houses.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.name} ({h.my_role})
+              </option>
+            ))}
+          </select>
+        </div>
 
 {/* ============================================================
     UI: Image file picker
@@ -1571,6 +1631,24 @@ export default function TestKonva() {
 
           <h3>Instructions</h3>
 
+            <button
+              type="button"
+              onClick={() => {
+                const instruction_steps = [
+                  ...(ocrSections.instruction_steps || []),
+                  "",
+                ];
+
+                setOcrSections({
+                  ...ocrSections,
+                  instruction_steps,
+                });
+              }}
+              style={{ marginBottom: 8 }}
+            >
+              Add Step
+            </button>
+
           {(ocrSections.instruction_steps || []).map((step, index) => (
             <div key={index} style={{ marginBottom: 12 }}>
               <label>
@@ -1629,9 +1707,6 @@ export default function TestKonva() {
                 Save Recipe Items
               </button>
 
-              <button onClick={() => alert("Category Manager coming soon")}>
-                Manage Categories
-              </button>
             </div>
 
             <div
