@@ -535,6 +535,7 @@ export default function TestKonva() {
             },
             body: JSON.stringify({
               house_id: selectedHouseId,
+              created_by: localStorage.getItem("account_id"),
               source_image_name: selectedFile.name,
               image_width: image?.width || null,
               image_height: image?.height || null,
