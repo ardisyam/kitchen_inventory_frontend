@@ -20,6 +20,12 @@ export default function Login({ onLogin }) {
 
       const result = await response.json();
 
+        Object.entries(result).forEach(([key, value]) => {
+          if (value !== null && value !== undefined && typeof value !== "object") {
+            localStorage.setItem(key, String(value));
+          }
+        });
+
       if (!response.ok) {
         setMessage(result.message || "Login failed");
         return;

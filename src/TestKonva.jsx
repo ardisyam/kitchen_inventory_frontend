@@ -43,12 +43,17 @@ export default function TestKonva() {
   const [createdRecipeId, setCreatedRecipeId] = useState(null);
   const [ingredientMatches, setIngredientMatches] = useState({});
   const [itemSuggestions, setItemSuggestions] = useState({});
+  const [itemSearchText, setItemSearchText] = useState({});
   const [showIngredientMatching, setShowIngredientMatching] = useState(false);
   const [measureLookup, setMeasureLookup] = useState({});
   const [categoryCandidates, setCategoryCandidates] = useState({});
   const [categorySearchText, setCategorySearchText] = useState({});
   const [dietaries, setDietaries] = useState([]);
   const [selectedDietaryIds, setSelectedDietaryIds] = useState([]);
+
+
+  const displayName = localStorage.getItem("display_name") || localStorage.getItem("email") || "Unknown";
+  const displayRole = localStorage.getItem("display_role") || localStorage.getItem("role") || "User";
 
     useEffect(() => {
       async function loadHouses() {
@@ -583,8 +588,59 @@ export default function TestKonva() {
         .trim();
     };
 
+    const singularizeIngredientText = (text) => {
+      text = (text || "").trim().toLowerCase();
+
+      if (text.endsWith("ies")) {
+        return text.slice(0, -3) + "y";
+      }
+
+      if (text.endsWith("oes")) {
+        return text.slice(0, -2);
+      }
+
+      if (text.endsWith("s") && !text.endsWith("ss")) {
+        return text.slice(0, -1);
+      }
+
+      return text;
+    };
+
+    const searchItemsByText = async (index, text) => {
+      const q = (text || "").trim();
+
+      if (!q) {
+        alert("Please type an item search term.");
+        return;
+      }
+
+      try {
+        const response = await apiFetch(
+          `${API_BASE_URL}/api/items?search=${encodeURIComponent(q)}&limit=10`
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Item search failed:", result);
+          alert(result.message || "Item search failed.");
+          return;
+        }
+
+        setItemSuggestions((prev) => ({
+          ...prev,
+          [index]: result.items || [],
+        }));
+      } catch (err) {
+        console.error("Item search error:", err);
+        alert("Item search failed.");
+      }
+    };
+
     const searchItemsForIngredient = async (index, ingredientText) => {
-      const text = cleanIngredientSearchText(ingredientText);
+        const text = singularizeIngredientText(
+          cleanIngredientSearchText(ingredientText)
+        );
 
       if (!text) {
         setItemSuggestions((prev) => ({
@@ -1042,6 +1098,18 @@ export default function TestKonva() {
   return (
     <div style={{ padding: 20 }}>
       <h2>Recipe Scan Region Editor</h2>
+        <div
+          style={{
+            marginBottom: 12,
+            padding: "6px 10px",
+            background: "#f5f5f5",
+            border: "1px solid #ddd",
+            borderRadius: 4,
+            fontSize: 13,
+          }}
+        >
+          Logged in as <b>{displayName}</b> ({displayRole})
+        </div>
 
         <div style={{ marginTop: 10, marginBottom: 10 }}>
           <label>
@@ -1775,6 +1843,29 @@ export default function TestKonva() {
                           ))}
                         </select>
                       )}
+
+                    <input
+                      type="text"
+                      placeholder="search item"
+                      value={itemSearchText[index] || ""}
+                      onChange={(e) =>
+                        setItemSearchText((prev) => ({
+                          ...prev,
+                          [index]: e.target.value,
+                        }))
+                      }
+                      style={{ width: 120, marginRight: 4 }}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        searchItemsByText(index, itemSearchText[index] || "")
+                      }
+                      style={{ marginRight: 8 }}
+                    >
+                      Search
+                    </button>
 
                       <button
                         type="button"
