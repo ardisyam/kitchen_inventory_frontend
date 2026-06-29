@@ -47,6 +47,7 @@ export default function TestKonva() {
   const [showIngredientMatching, setShowIngredientMatching] = useState(false);
   const [measureLookup, setMeasureLookup] = useState({});
   const [categoryCandidates, setCategoryCandidates] = useState({});
+  const [categoryMatches, setCategoryMatches] = useState({});
   const [categorySearchText, setCategorySearchText] = useState({});
   const [dietaries, setDietaries] = useState([]);
   const [selectedDietaryIds, setSelectedDietaryIds] = useState([]);
@@ -665,6 +666,18 @@ export default function TestKonva() {
 
         const items = result.items || [];
 
+        if (items.length === 1 && items[0].category_id) {
+          setCategoryCandidates((prev) => ({
+            ...prev,
+            [index]: [
+              {
+                id: items[0].category_id,
+                name: items[0].category_name || items[0].category_id,
+              },
+            ],
+          }));
+        }
+
         setItemSuggestions((prev) => ({
           ...prev,
           [index]: items,
@@ -676,7 +689,7 @@ export default function TestKonva() {
             [index]: items[0].id,
           }));
 
-          await searchCategoriesForIngredient(index, ingredientText);
+          await loadCategoryForMatchedItem(index, items[0].id);
         }
       } catch (err) {
         console.error("Item search error:", err);
@@ -1001,6 +1014,42 @@ export default function TestKonva() {
       } catch (err) {
         console.error("Category search error:", err);
         alert("Category search failed.");
+      }
+    };
+
+    const loadCategoryForMatchedItem = async (index, itemId) => {
+      if (!itemId) return;
+
+      try {
+        const response = await apiFetch(`${API_BASE_URL}/api/items/${itemId}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.log("Load matched item failed:", result);
+          return;
+        }
+
+        const item = result.item || result.data || result;
+
+        if (!item.category_id) return;
+
+        // Moved here (after item exists)
+        setCategoryMatches((prev) => ({
+          ...prev,
+          [index]: item.category_id,
+        }));
+
+        setCategoryCandidates((prev) => ({
+          ...prev,
+          [index]: [
+            {
+              id: item.category_id,
+              name: item.category_name || item.category?.name || item.category_id,
+            },
+          ],
+        }));
+      } catch (err) {
+        console.error("Load matched item category error:", err);
       }
     };
 
@@ -1814,10 +1863,39 @@ export default function TestKonva() {
 
                     <div>
                       {/* Item selection and item creation */}
-                      {suggestions.length > 0 && (
+{/*                       {suggestions.length > 0 && ( */}
+{/*                         <select */}
+{/*                           value={ingredientMatches[index] || ""} */}
+{/*                           onChange={(e) => { */}
+{/*                             const itemId = e.target.value; */}
+
+{/*                             setIngredientMatches((prev) => ({ */}
+{/*                               ...prev, */}
+{/*                               [index]: itemId, */}
+{/*                             })); */}
+
+{/*                             if (itemId) { */}
+{/*                               loadCategoryForMatchedItem(index, itemId); */}
+{/*                             } */}
+{/*                           }} */}
+
+
+
+{/*                           style={{ width: 150, marginRight: 8 }} */}
+{/*                         > */}
+{/*                           <option value="">Select item</option> */}
+
+{/*                           {suggestions.map((item) => ( */}
+{/*                             <option key={item.id} value={item.id}> */}
+{/*                               {item.name || item.slug || item.id} */}
+{/*                             </option> */}
+{/*                           ))} */}
+{/*                         </select> */}
+{/*                       )} */}
+
                         <select
                           value={ingredientMatches[index] || ""}
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const itemId = e.target.value;
 
                             setIngredientMatches((prev) => ({
@@ -1826,10 +1904,7 @@ export default function TestKonva() {
                             }));
 
                             if (itemId) {
-                              searchCategoriesForIngredient(
-                                index,
-                                cleanIngredientSearchText(ingredient.ingredient_text || "")
-                              );
+                              await loadCategoryForMatchedItem(index, itemId);
                             }
                           }}
                           style={{ width: 150, marginRight: 8 }}
@@ -1842,7 +1917,6 @@ export default function TestKonva() {
                             </option>
                           ))}
                         </select>
-                      )}
 
                     <input
                       type="text"
@@ -1888,9 +1962,14 @@ export default function TestKonva() {
                         }}
                       >
                         <select
-                          defaultValue=""
+                          value={categoryMatches[index] || ""}
                           onChange={(e) => {
                             const categoryId = e.target.value;
+
+                            setCategoryMatches((prev) => ({
+                              ...prev,
+                              [index]: categoryId,
+                            }));
 
                             if (!categoryId) return;
 
