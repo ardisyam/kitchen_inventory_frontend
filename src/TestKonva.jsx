@@ -727,30 +727,44 @@ export default function TestKonva() {
       }
 
       try {
+        const isAdmin =
+          displayRole === "admin" ||
+          displayRole === "superadmin";
+
         const houseId = selectedHouseId;
-        console.log("CREATE HOUSE ITEM houseId:", houseId);
-        if (!houseId) {
+
+        if (!isAdmin && !houseId) {
           alert("No active house selected. Please select a house first.");
           return;
         }
+
+        const payload = {
+          name,
+          base_measure_id: "MEAS_EA",
+          is_food: true,
+        };
+
+        if (!isAdmin) {
+          payload.house_id = houseId;
+        }
+
+        console.log("displayRole:", displayRole);
+        console.log("isAdmin:", isAdmin);
+        console.log("payload:", payload);
+
         const response = await apiFetch(`${API_BASE_URL}/api/items`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            name,
-            house_id: houseId,
-            base_measure_id: "MEAS_EA",
-            is_food: true,
-          }),
+          body: JSON.stringify(payload),
         });
 
         const result = await response.json();
 
         if (!response.ok) {
-          console.log("Create house item failed:", result);
-          alert(result.message || "Create house item failed.");
+          console.log("Create item failed:", result);
+          alert(result.message || "Create item failed.");
           return;
         }
 
@@ -776,13 +790,12 @@ export default function TestKonva() {
 
         await searchCategoriesForIngredient(index, ingredientText);
 
-        alert(`Created house item: ${newItem.name}`);
+        alert(`Created item: ${newItem.name}`);
       } catch (err) {
-        console.error("Create house item error:", err);
-        alert("Create house item failed.");
+        console.error("Create item error:", err);
+        alert("Create item failed.");
       }
     };
-
 
 // ============================================================
 // SECTION: Save matched ingredients as recipe items
@@ -1060,14 +1073,20 @@ export default function TestKonva() {
 
     const updateItemCategory = async (itemId, categoryId) => {
       try {
+        const payload = {
+          category_id: categoryId || null,
+        };
+
+        console.log("UPDATE ITEM CATEGORY itemId:", itemId);
+        console.log("UPDATE ITEM CATEGORY categoryId:", categoryId);
+        console.log("UPDATE ITEM CATEGORY payload:", payload);
+
         const response = await apiFetch(`${API_BASE_URL}/api/items/${itemId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            category_id: categoryId || null,
-          }),
+          body: JSON.stringify(payload),
         });
 
         const result = await response.json();
