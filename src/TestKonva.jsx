@@ -505,7 +505,9 @@ export default function TestKonva() {
 
     const loadRecentScans = async () => {
       try {
-       const response = await apiFetch(`${API_BASE_URL}/api/recipe-scans?limit=20`);
+        const response = await apiFetch(
+          `${API_BASE_URL}/api/recipe-scans?limit=8`
+        );
 
         const result = await response.json();
 
