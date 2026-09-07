@@ -668,6 +668,24 @@ export default function TestKonva() {
 
         const items = result.items || [];
 
+        const normalizedIngredient = text.toLowerCase().trim();
+
+        const exactItem = items.find(
+          (item) =>
+            (item.name || "").toLowerCase().trim() === normalizedIngredient
+        );
+
+        console.log(
+          "AUTO MATCH:",
+          ingredientText,
+          "search text:",
+          text,
+          "count:",
+          items.length,
+          "items:",
+          items
+        );
+
         if (items.length === 1 && items[0].category_id) {
           setCategoryCandidates((prev) => ({
             ...prev,
@@ -685,14 +703,20 @@ export default function TestKonva() {
           [index]: items,
         }));
 
-        if (items.length === 1) {
+        const matchedItem =
+          exactItem ||
+          (items.length === 1 ? items[0] : null);
+
+        if (matchedItem) {
           setIngredientMatches((prev) => ({
             ...prev,
-            [index]: items[0].id,
+            [index]: matchedItem.id,
           }));
 
-          await loadCategoryForMatchedItem(index, items[0].id);
+          await loadCategoryForMatchedItem(index, matchedItem.id);
         }
+
+
       } catch (err) {
         console.error("Item search error:", err);
         alert("Item search failed.");
@@ -785,14 +809,14 @@ export default function TestKonva() {
           [index]: [newItem, ...(prev[index] || [])],
         }));
 
+
         setIngredientMatches((prev) => ({
           ...prev,
           [index]: newItem.id,
         }));
 
-        await searchCategoriesForIngredient(index, ingredientText);
-
         alert(`Created item: ${newItem.name}`);
+
       } catch (err) {
         console.error("Create item error:", err);
         alert("Create item failed.");
@@ -1425,15 +1449,18 @@ export default function TestKonva() {
                   <div style={{ fontSize: 12 }}>
                     <b>{scan.status}</b>
                     {" | "}
-                    {new Date(
-                      scan.updated_at || scan.created_at
-                    ).toLocaleString("en-AU", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {scan.updated_at || scan.created_at
+                      ? new Date(scan.updated_at || scan.created_at).toLocaleString(
+                          "en-AU",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )
+                      : "Date unavailable"}
                   </div>
 
                   <div style={{ fontSize: 12, color: "#666" }}>
