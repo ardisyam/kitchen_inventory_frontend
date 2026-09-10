@@ -21,6 +21,7 @@ export default function TestKonva() {
   const [newRect, setNewRect] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentLabel, setCurrentLabel] = useState("title");
+  const [nextInstructionStep, setNextInstructionStep] = useState(1);
   const [recipeScanId, setRecipeScanId] = useState(null);
   const [recentScans, setRecentScans] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -263,17 +264,35 @@ export default function TestKonva() {
   const handleMouseDown = (e) => {
     if (!image) return;
 
-    const pos = toImagePos(e.target.getStage());
+    const pos = toImagePos(
+      e.target.getStage()
+    );
+
+    const isInstructionStep =
+      currentLabel === "instruction_step";
 
     setIsDrawing(true);
+
     setNewRect({
       x: pos.x,
       y: pos.y,
       width: 0,
       height: 0,
+
       region_type: currentLabel,
-      label: currentLabel,
-      split_x: currentLabel === "ingredient_row" ? 180 : null,
+
+      label: isInstructionStep
+        ? `Step ${nextInstructionStep}`
+        : currentLabel,
+
+      step_number: isInstructionStep
+        ? nextInstructionStep
+        : null,
+
+      split_x:
+        currentLabel === "ingredient_row"
+          ? 180
+          : null,
     });
   };
 
@@ -294,19 +313,51 @@ export default function TestKonva() {
 
     const fixedRect = {
       ...newRect,
-      x: newRect.width < 0 ? newRect.x + newRect.width : newRect.x,
-      y: newRect.height < 0 ? newRect.y + newRect.height : newRect.y,
-      width: Math.abs(newRect.width),
-      height: Math.abs(newRect.height),
+
+      x:
+        newRect.width < 0
+          ? newRect.x + newRect.width
+          : newRect.x,
+
+      y:
+        newRect.height < 0
+          ? newRect.y + newRect.height
+          : newRect.y,
+
+      width: Math.abs(
+        newRect.width
+      ),
+
+      height: Math.abs(
+        newRect.height
+      ),
     };
 
-    if (fixedRect.width < 5 || fixedRect.height < 5) {
+    if (
+      fixedRect.width < 5
+      || fixedRect.height < 5
+    ) {
       setNewRect(null);
       setIsDrawing(false);
       return;
     }
 
-    setRectangles((prev) => [...prev, fixedRect]);
+    setRectangles(
+      (prev) => [
+        ...prev,
+        fixedRect,
+      ]
+    );
+
+    if (
+      fixedRect.region_type
+      === "instruction_step"
+    ) {
+      setNextInstructionStep(
+        (prev) => prev + 1
+      );
+    }
+
     setNewRect(null);
     setIsDrawing(false);
   };
@@ -315,7 +366,27 @@ export default function TestKonva() {
 // SECTION: Rectangle edit helpers
 // ============================================================
   const handleUndo = () => {
-    setRectangles((prev) => prev.slice(0, -1));
+    setRectangles((prev) => {
+      if (!prev.length) {
+        return prev;
+      }
+
+      const removed =
+        prev[prev.length - 1];
+
+      if (
+        removed.region_type
+        === "instruction_step"
+      ) {
+        setNextInstructionStep(
+          Number(
+            removed.step_number || 1
+          )
+        );
+      }
+
+      return prev.slice(0, -1);
+    });
   };
 
   const updateRectanglePosition = (index, x, y) => {
@@ -361,6 +432,11 @@ export default function TestKonva() {
               : r.label || r.region_type || `Region ${index + 1}`,
 
           sort_order: index + 1,
+
+          step_number:
+            r.region_type === "instruction_step"
+              ? Number(r.step_number || 0)
+              : null,
 
           x: Math.round(Math.max(0, r.x)),
           y: Math.round(Math.max(0, r.y)),
@@ -1290,8 +1366,58 @@ export default function TestKonva() {
               <button onClick={() => setCurrentLabel("title")}>Title</button>
               <button onClick={() => setCurrentLabel("serves")}>Serves</button>
               <button onClick={() => setCurrentLabel("ingredients")}>Ingr</button>
-              <button onClick={() => setCurrentLabel("instructions")}>Steps</button>
-              <button onClick={() => setCurrentLabel("instruction_column")}>Step Col</button>
+
+              <button
+                onClick={() =>
+                  setCurrentLabel("instructions")
+                }
+              >
+                Steps All
+              </button>
+
+              <button
+                onClick={() =>
+                  setCurrentLabel(
+                    "instruction_column"
+                  )
+                }
+              >
+                Step Col
+              </button>
+
+              <button
+                onClick={() => {
+                  const existingSteps =
+                    rectangles.filter(
+                      (r) =>
+                        r.region_type
+                        === "instruction_step"
+                    );
+
+                  const highestStep =
+                    existingSteps.reduce(
+                      (highest, r) =>
+                        Math.max(
+                          highest,
+                          Number(
+                            r.step_number || 0
+                          )
+                        ),
+                      0
+                    );
+
+                  setNextInstructionStep(
+                    highestStep + 1
+                  );
+
+                  setCurrentLabel(
+                    "instruction_step"
+                  );
+                }}
+              >
+                Step Single
+              </button>
+
               <button onClick={() => setCurrentLabel("notes")}>Notes</button>
             </div>
 
@@ -2073,9 +2199,14 @@ export default function TestKonva() {
           </div>
         )}
 
-      <div style={{ marginBottom: 10 }}>
-        Current Label: <b>{currentLabel}</b>
-      </div>
+        <div style={{ marginBottom: 10 }}>
+          Current Label:{" "}
+          <b>
+            {currentLabel === "instruction_step"
+              ? `Step ${nextInstructionStep}`
+              : currentLabel}
+          </b>
+        </div>
 
 {/* ============================================================
     UI: Konva image canvas and region rectangles
