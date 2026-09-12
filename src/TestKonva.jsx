@@ -826,6 +826,29 @@ export default function TestKonva() {
           }));
 
           await loadCategoryForMatchedItem(index, matchedItem.id);
+        } 
+        else {
+          const categoryHint =
+            await getItemCategoryHint(
+              ingredientText
+            );
+
+          const preferredCategory =
+            categoryHint?.preferred_category || null;
+
+          if (preferredCategory?.id) {
+            setCategoryCandidates((prev) => ({
+              ...prev,
+              [index]: [
+                preferredCategory,
+              ],
+            }));
+
+            setCategoryMatches((prev) => ({
+              ...prev,
+              [index]: preferredCategory.id,
+            }));
+          }
         }
 
 
