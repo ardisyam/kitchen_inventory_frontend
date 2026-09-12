@@ -1469,14 +1469,51 @@ export default function TestKonva() {
 
             {/* Row 2 */}
             <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-              <button onClick={() => setCurrentLabel("title")}>Title</button>
-              <button onClick={() => setCurrentLabel("serves")}>Serves</button>
-              <button onClick={() => setCurrentLabel("ingredients")}>Ingr</button>
+              <button
+                onClick={() => setCurrentLabel("title")}
+                style={{
+                  background: currentLabel === "title" ? "#1976d2" : "",
+                  color: currentLabel === "title" ? "white" : "",
+                  fontWeight: currentLabel === "title" ? "bold" : "normal",
+                }}
+              >
+                Title
+              </button>
+
+              <button
+                onClick={() => setCurrentLabel("serves")}
+                style={{
+                  background: currentLabel === "serves" ? "#1976d2" : "",
+                  color: currentLabel === "serves" ? "white" : "",
+                  fontWeight: currentLabel === "serves" ? "bold" : "normal",
+                }}
+              >
+                Serves
+              </button>
+
+              <button
+                onClick={() => setCurrentLabel("ingredients")}
+                style={{
+                  background: currentLabel === "ingredients" ? "#1976d2" : "",
+                  color: currentLabel === "ingredients" ? "white" : "",
+                  fontWeight: currentLabel === "ingredients" ? "bold" : "normal",
+                }}
+              >
+                Ingr
+              </button>
 
               <button
                 onClick={() =>
                   setCurrentLabel("instructions")
                 }
+                style={{
+                  background:
+                    currentLabel === "instructions" ? "#1976d2" : "",
+                  color:
+                    currentLabel === "instructions" ? "white" : "",
+                  fontWeight:
+                    currentLabel === "instructions" ? "bold" : "normal",
+                }}
               >
                 Steps All
               </button>
@@ -1487,6 +1524,20 @@ export default function TestKonva() {
                     "instruction_column"
                   )
                 }
+                style={{
+                  background:
+                    currentLabel === "instruction_column"
+                      ? "#1976d2"
+                      : "",
+                  color:
+                    currentLabel === "instruction_column"
+                      ? "white"
+                      : "",
+                  fontWeight:
+                    currentLabel === "instruction_column"
+                      ? "bold"
+                      : "normal",
+                }}
               >
                 Step Col
               </button>
@@ -1520,11 +1571,45 @@ export default function TestKonva() {
                     "instruction_step"
                   );
                 }}
+                style={{
+                  background:
+                    currentLabel === "instruction_step"
+                      ? "#1976d2"
+                      : "",
+                  color:
+                    currentLabel === "instruction_step"
+                      ? "white"
+                      : "",
+                  fontWeight:
+                    currentLabel === "instruction_step"
+                      ? "bold"
+                      : "normal",
+                }}
               >
                 Step Single
               </button>
 
-              <button onClick={() => setCurrentLabel("notes")}>Notes</button>
+              <button
+                onClick={() =>
+                  setCurrentLabel("notes")
+                }
+                style={{
+                  background:
+                    currentLabel === "notes"
+                      ? "#1976d2"
+                      : "",
+                  color:
+                    currentLabel === "notes"
+                      ? "white"
+                      : "",
+                  fontWeight:
+                    currentLabel === "notes"
+                      ? "bold"
+                      : "normal",
+                }}
+              >
+                Notes
+              </button>
             </div>
 
             {/* Row 3 */}
