@@ -662,7 +662,10 @@ export default function TestKonva() {
     const cleanIngredientSearchText = (text) => {
       return (text || "")
         .toLowerCase()
-        .replace(/\b(raw|fresh|dried|finely|grated|extra|virgin|leaves|leaf)\b/g, "")
+        .replace(
+          /\b(raw|fresh|dried|finely|grated|extra|virgin)\b/g,
+          ""
+        )
         .replace(/\s+/g, " ")
         .trim();
     };
@@ -683,6 +686,15 @@ export default function TestKonva() {
       }
 
       return text;
+    };
+
+    const normalizeItemMatchName = (text) => {
+      return (text || "")
+        .toLowerCase()
+        .replace(/[-–—]+/g, " ")
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .replace(/\s+/g, " ")
+        .trim();
     };
 
     const searchItemsByText = async (index, text) => {
@@ -716,6 +728,26 @@ export default function TestKonva() {
       }
     };
 
+    const normalizeIngredientForCategorySearch = (text) => {
+      let value = (text || "")
+        .toLowerCase()
+        .trim();
+
+      value = value
+        .replace(
+          /\b(ground|pitted|chopped|finely|coarsely|roughly|fresh|dried)\b/g,
+          ""
+        )
+        .replace(
+          /\b(pods?|sticks?)\b/g,
+          ""
+        )
+        .replace(/\s+/g, " ")
+        .trim();
+
+      return value;
+    };
+
     const searchItemsForIngredient = async (index, ingredientText) => {
         const text = singularizeIngredientText(
           cleanIngredientSearchText(ingredientText)
@@ -746,9 +778,13 @@ export default function TestKonva() {
 
         const normalizedIngredient = text.toLowerCase().trim();
 
+        const normalizedIngredientName =
+          normalizeItemMatchName(ingredientText);
+
         const exactItem = items.find(
           (item) =>
-            (item.name || "").toLowerCase().trim() === normalizedIngredient
+            normalizeItemMatchName(item.name) ===
+            normalizedIngredientName
         );
 
         console.log(
@@ -840,11 +876,25 @@ export default function TestKonva() {
           return;
         }
 
+        const categoryHint = await getItemCategoryHint(
+          ingredientText
+        );
+
+        console.log(
+          "ITEM CATEGORY HINT:",
+          categoryHint
+        );
+      
         const payload = {
           name,
           base_measure_id: "MEAS_EA",
           is_food: true,
         };
+
+        if (categoryHint?.preferred_category?.id) {
+          payload.category_id =
+            categoryHint.preferred_category.id;
+        }
 
         if (!isAdmin) {
           payload.house_id = houseId;
@@ -875,9 +925,26 @@ export default function TestKonva() {
         console.log("NEW ITEM", newItem);
         console.log("CATEGORY CANDIDATES", newItem.category_candidates);
 
+        const preferredCategory =
+          categoryHint?.preferred_category || null;
+
+        const categoryCandidatesList = [
+          ...(preferredCategory
+            ? [preferredCategory]
+            : []),
+          ...(newItem.category_candidates || []),
+        ].filter(
+          (category, position, array) =>
+            category?.id
+            && array.findIndex(
+              (candidate) =>
+                candidate?.id === category.id
+            ) === position
+        );
+
         setCategoryCandidates((prev) => ({
           ...prev,
-          [index]: newItem.category_candidates || [],
+          [index]: categoryCandidatesList,
         }));
 
         setItemSuggestions((prev) => ({
@@ -890,6 +957,13 @@ export default function TestKonva() {
           ...prev,
           [index]: newItem.id,
         }));
+
+        if (newItem.category_id) {
+          setCategoryMatches((prev) => ({
+            ...prev,
+            [index]: newItem.category_id,
+          }));
+        }
 
         alert(`Created item: ${newItem.name}`);
 
@@ -1099,6 +1173,38 @@ export default function TestKonva() {
 // ============================================================
 // SECTION: Category search and item category update
 // ============================================================
+    const getItemCategoryHint = async (ingredientText) => {
+      const text = (ingredientText || "").trim();
+
+      if (!text) {
+        return null;
+      }
+
+      try {
+        const response = await apiFetch(
+          `${API_BASE_URL}/api/item-category-hints/lookup`
+          + `?text=${encodeURIComponent(text)}`
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.found) {
+          return null;
+        }
+
+        return result;
+      } catch (err) {
+        console.error(
+          "Item category hint error:",
+          err
+        );
+
+        return null;
+      }
+    };
+
+
+
     const searchCategoriesForIngredient = async (index, text) => {
       const q = (text || "").trim();
       console.log("CATEGORY SEARCH:", index, text);
